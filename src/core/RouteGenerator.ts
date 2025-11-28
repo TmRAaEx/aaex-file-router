@@ -145,6 +145,7 @@ export class RouteGenerator {
       .replace(/"React\.createElement\((\w+)\)"/g, "React.createElement($1)");
 
     const mapString = `
+    //* AUTO GENERATED: DO NOT EDIT
 import React from 'react';
 ${this.topLevelImports.join("\n")}
 import type { RouteObject } from 'react-router-dom';
