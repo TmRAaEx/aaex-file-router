@@ -2,6 +2,10 @@
 
 A file-based routing system for React projects that automatically generates routes from your file structure. Similar to Next.js App Router or Remix file conventions.
 
+## V. 1.0.1
+Fixed issue that required --legacy-peer-deps flag for installation
+
+
 ## Features
 
 - **Automatic Route Generation**: Routes are generated based on your file and folder structure
