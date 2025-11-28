@@ -11,6 +11,10 @@ export class RouteGenerator {
   // Stores static imports for top-level files (rendered immediately, not lazy-loaded)
   private topLevelImports: string[] = [];
 
+
+  private clearImports():void{
+    this.topLevelImports = [];
+  }
   /**
    * Recursively converts FileData tree into React Router RouteConfig array
    * Handles layout files, index files, and nested routes with proper pathing
@@ -59,7 +63,10 @@ export class RouteGenerator {
         }
 
         childrenRoutes.push(
-          ...this.fileDataToRoutes(otherChildren, path.join(parentPath, file.name))
+          ...this.fileDataToRoutes(
+            otherChildren,
+            path.join(parentPath, file.name)
+          )
         );
 
         routes.push({
@@ -75,16 +82,23 @@ export class RouteGenerator {
           continue;
         }
 
-        const pathSegment = isIndexFile ? (parentPath ? "" : "/") : nameWithoutExt.toLowerCase();
+        const pathSegment = isIndexFile
+          ? parentPath
+            ? ""
+            : "/"
+          : nameWithoutExt.toLowerCase();
 
         if (!/^layout\.(tsx|jsx|ts|js)$/i.test(file.name)) {
           if (isTopLevel) {
             const importName = nameWithoutExt.replace(/[^a-zA-Z0-9]/g, "_");
-            const capitalized = importName[0].toUpperCase() + importName.slice(1);
+            const capitalized =
+              importName[0].toUpperCase() + importName.slice(1);
             // Fix: Proper path formatting
             const filePath = file.relative_path.replace(/^src\//, "./");
-            this.topLevelImports.push(`import ${capitalized} from '${filePath}';`);
-            
+            this.topLevelImports.push(
+              `import ${capitalized} from '${filePath}';`
+            );
+
             routes.push({
               path: pathSegment,
               element: `React.createElement(${capitalized})`,
@@ -116,6 +130,9 @@ export class RouteGenerator {
    * @returns Complete routes file content ready to be written to disk
    */
   public async generateComponentsMap(fileData: FileData[]): Promise<string> {
+
+    this.clearImports();
+
     const routes = this.fileDataToRoutes(fileData);
 
     const routesString = JSON.stringify(routes, null, 2)
@@ -125,10 +142,7 @@ export class RouteGenerator {
         "React.createElement(React.lazy(() => import('$1')))"
       )
       // Replace stringified React.createElement(ComponentName) with actual function call
-      .replace(
-        /"React\.createElement\((\w+)\)"/g,
-        "React.createElement($1)"
-      );
+      .replace(/"React\.createElement\((\w+)\)"/g, "React.createElement($1)");
 
     const mapString = `
 import React from 'react';
