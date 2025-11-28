@@ -1,6 +1,6 @@
 {
   "name": "aaex-file-router",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "A file-based routing system for React projects that automatically generates routes from your file structure. Similar to Next.js App Router or Remix file conventions.",
   "main": "dist/index.js",
   "scripts": {
@@ -13,6 +13,11 @@
     "router",
     "vite-plugin"
   ],
+
+  "exports":{
+      ".": "./dist/index.js",
+      "./core": "./dist/core/index.js"
+  },
   "author": "TmRAaEx",
   "license": "MIT",
   "type": "module",
@@ -21,20 +26,23 @@
     "README.md",
     "LICENCE"
   ],
+  "types": "dist/index.d.ts",
   "devDependencies": {
     "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.6",
     "typescript": "^5.9.3",
     "vite": "^7.2.4",
     "vite-plugin-dts": "^4.5.4"
   },
-  "dependencies": {
-    "fs": "^0.0.1-security"
-  },
+  
   "peerDependencies": {
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.6",
     "vite": "^7.2.4"
-
   }
 }

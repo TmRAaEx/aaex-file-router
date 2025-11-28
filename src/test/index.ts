@@ -16,12 +16,14 @@ async function generateRoutes() {
     const generator = new RouteGenerator();
     const routeMap = await generator.generateComponentsMap(fileData);
 
-    // Go up from dist/test back to src/test
-    const srcTestDir = __dirname.replace(/dist[\\/]test/, "src/test");
-    const filePath = path.join(srcTestDir, "routes.ts");
-    await fs.writeFile(filePath, routeMap, "utf-8");
 
-    console.log(`Routes file created at: ${filePath}`);
+    console.log("Route map: ", routeMap)
+
+    const routType = generator.generateRoutesTypeDef(fileData);
+
+    console.log(routType);
+    
+
   } catch (error) {
     console.error("Error generating routes:", error);
   }

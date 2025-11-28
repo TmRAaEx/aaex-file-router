@@ -1,5 +1,5 @@
 import { FileData } from "./FileScanner";
-import path from "path";
+// import path from "path";
 
 interface RouteConfig {
   path: string;
@@ -228,5 +228,41 @@ export default routes;
 `;
 
     return mapString;
+  }
+
+  /**
+   * Generates a TypeScript definition file exporting a union type of all route paths
+   * @param fileData - FileData tree from FileScanner
+   * @returns Type definition file content as string
+   */
+  public async generateRoutesTypeDef(fileData: FileData[]): Promise<string> {
+    // Reset state
+    this.topLevelImports = [];
+    this.importSet = new Set();
+    this.processedFiles = new Set();
+
+    const routes = this.fileDataToRoutes(fileData);
+
+    const routePaths = [];
+
+    for (let route of routes) {
+      routePaths.push(route.path);
+      if (route.children?.length) {
+        route.children.map((child) => {
+          if (child.path != "") {
+            routePaths.push(`${route.path}/${child.path}`);
+          }
+        });
+      }
+    }
+
+    const paths = Array.from(new Set(routePaths))
+      .map((p) => `"${p}"`)
+      .join(" | ");
+
+    return `// * AUTO GENERATED: DO NOT EDIT
+
+        export type FileRoutes = ${paths};
+        `;
   }
 }

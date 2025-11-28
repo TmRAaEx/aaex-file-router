@@ -1,4 +1,4 @@
-import { Dirent, promises as fs } from "fs";
+import { Dirent, promises as fs } from "node:fs";
 import path from "path";
 
 export interface FileData {
