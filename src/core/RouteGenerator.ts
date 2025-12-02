@@ -237,44 +237,43 @@ export default routes;
    * @param fileData - FileData tree from FileScanner
    * @returns Type definition file content as string
    */
- public async generateRoutesTypeDef(fileData: FileData[]): Promise<string> {
-  // Reset state
-  this.topLevelImports = [];
-  this.importSet = new Set();
-  this.processedFiles = new Set();
+  public async generateRoutesTypeDef(fileData: FileData[]): Promise<string> {
+    // Reset state
+    this.topLevelImports = [];
+    this.importSet = new Set();
+    this.processedFiles = new Set();
 
-  const routes = this.fileDataToRoutes(fileData);
+    const routes = this.fileDataToRoutes(fileData);
 
-  const routePaths: string[] = [];
+    const routePaths: string[] = [];
 
-  const addRoute = (route: any, parentPath = "") => {
-    const fullPath = parentPath
-      ? `${parentPath}/${route.path}`.replace(/\/+/g, "/")
-      : route.path;
+    const addRoute = (route: any, parentPath = "") => {
+      const fullPath = parentPath
+        ? `${parentPath}/${route.path}`.replace(/\/+/g, "/")
+        : route.path;
 
-    // Replace ":param" with ${string} for TypeScript type
-    const tsPath = fullPath
-      .split("/")
-      .map((seg:string) => (seg.startsWith(":") ? "${string}" : seg))
-      .join("/");
+      // Replace ":param" with ${string} for TypeScript type
+      const tsPath = fullPath
+        .split("/")
+        .map((seg: string) => (seg.startsWith(":") ? "${string}" : seg))
+        .join("/");
 
-    routePaths.push(tsPath);
+      routePaths.push(tsPath);
 
-    if (route.children?.length) {
-      route.children.forEach((child:string) => addRoute(child, fullPath));
-    }
-  };
+      if (route.children?.length) {
+        route.children.forEach((child: string) => addRoute(child, fullPath));
+      }
+    };
 
-  routes.forEach((route) => addRoute(route));
+    routes.forEach((route) => addRoute(route));
 
-  const uniquePaths = Array.from(new Set(routePaths))
-    .map((p) => `\`${p}\``) // wrap in backticks for template literal types
-    .join(" | ");
+    const uniquePaths = Array.from(new Set(routePaths))
+      .map((p) => `\`${p}\``) // wrap in backticks for template literal types
+      .join(" | ");
 
-  return `// * AUTO GENERATED: DO NOT EDIT
+    return `// * AUTO GENERATED: DO NOT EDIT
 
 export type FileRoutes = ${uniquePaths};
 `;
-}
-
+  }
 }
