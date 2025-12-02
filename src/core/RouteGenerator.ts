@@ -247,7 +247,7 @@ export default routes;
 
     const routePaths: string[] = [];
 
-    const addRoute = (route: any, parentPath = "") => {
+    const addRoute = (route: RouteConfig, parentPath = "") => {
       const fullPath = parentPath
         ? `${parentPath}/${route.path}`.replace(/\/+/g, "/")
         : route.path;
@@ -255,13 +255,13 @@ export default routes;
       // Replace ":param" with ${string} for TypeScript type
       const tsPath = fullPath
         .split("/")
-        .map((seg: string) => (seg.startsWith(":") ? "${string}" : seg))
+        .map((seg) => (seg.startsWith(":") ? "${string}" : seg))
         .join("/");
 
       routePaths.push(tsPath);
 
       if (route.children?.length) {
-        route.children.forEach((child: string) => addRoute(child, fullPath));
+        route.children.forEach((child) => addRoute(child, fullPath));
       }
     };
 
