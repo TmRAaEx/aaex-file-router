@@ -237,34 +237,44 @@ export default routes;
    * @param fileData - FileData tree from FileScanner
    * @returns Type definition file content as string
    */
-  public async generateRoutesTypeDef(fileData: FileData[]): Promise<string> {
-    // Reset state
-    this.topLevelImports = [];
-    this.importSet = new Set();
-    this.processedFiles = new Set();
+ public async generateRoutesTypeDef(fileData: FileData[]): Promise<string> {
+  // Reset state
+  this.topLevelImports = [];
+  this.importSet = new Set();
+  this.processedFiles = new Set();
 
-    const routes = this.fileDataToRoutes(fileData);
+  const routes = this.fileDataToRoutes(fileData);
 
-    const routePaths = [];
+  const routePaths: string[] = [];
 
-    for (let route of routes) {
-      routePaths.push(route.path);
-      if (route.children?.length) {
-        route.children.map((child) => {
-          if (child.path != "") {
-            routePaths.push(`${route.path}/${child.path}`);
-          }
-        });
-      }
+  const addRoute = (route: any, parentPath = "") => {
+    const fullPath = parentPath
+      ? `${parentPath}/${route.path}`.replace(/\/+/g, "/")
+      : route.path;
+
+    // Replace ":param" with ${string} for TypeScript type
+    const tsPath = fullPath
+      .split("/")
+      .map((seg:string) => (seg.startsWith(":") ? "${string}" : seg))
+      .join("/");
+
+    routePaths.push(tsPath);
+
+    if (route.children?.length) {
+      route.children.forEach((child:string) => addRoute(child, fullPath));
     }
+  };
 
-    const paths = Array.from(new Set(routePaths))
-      .map((p) => `"${p}"`)
-      .join(" | ");
+  routes.forEach((route) => addRoute(route));
 
-    return `// * AUTO GENERATED: DO NOT EDIT
+  const uniquePaths = Array.from(new Set(routePaths))
+    .map((p) => `\`${p}\``) // wrap in backticks for template literal types
+    .join(" | ");
 
-        export type FileRoutes = ${paths};
-        `;
-  }
+  return `// * AUTO GENERATED: DO NOT EDIT
+
+export type FileRoutes = ${uniquePaths};
+`;
+}
+
 }

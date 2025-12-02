@@ -12,16 +12,16 @@ async function generateRoutes() {
     const fileData = await scanner.get_file_data();
 
 
-    console.log(fileData);
+    // console.log(fileData);
     
 
     const generator = new RouteGenerator();
     const routeMap = await generator.generateComponentsMap(fileData);
 
 
-    console.log("Route map: ", routeMap)
+    // console.log("Route map: ", routeMap)
 
-    const routType = generator.generateRoutesTypeDef(fileData);
+    const routType = await generator.generateRoutesTypeDef(fileData);
 
     console.log(routType);
     
