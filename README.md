@@ -2,13 +2,16 @@
 
 A file-based routing system for React projects that automatically generates routes from your file structure. Similar to Next.js App Router or Remix file conventions.
 
-## V. 1.1.0
-Added type safe <FileLink> component and auto generation of the FileRoutes type for it to use
+## V. 1.2.0
+
+Added support for slugs in urls ex: - pages - users - [id].tsx
+resolves to users/:id
 
 ## Features
 
 - **Automatic Route Generation**: Routes are generated based on your file and folder structure
 - **Layout Support**: Create `layout.tsx` files to wrap nested routes
+- **Slug Support**: Creates dynamic routes for [slug] files
 - **Static & Lazy Loading**: Top-level routes use static imports, nested routes use lazy loading
 - **Hot Reload**: Vite plugin watches for file changes and regenerates routes automatically
 - **TypeScript Support**: Full TypeScript support with generated route types
@@ -31,23 +34,24 @@ src/pages/
 └── test/
     ├── layout.tsx     # Layout wrapper for /test/* routes
     ├── index.tsx      # Route "/test"
-    └── hello.tsx      # Route "/test/hello"
+    ├── hello.tsx      # Route "/test/hello"
+    └── [slug].tsx     # Route "/test/:slug"
 ```
 
 ### 2. Configure Vite
 
 ```typescript
 // vite.config.ts
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { aaexFileRouter } from 'aaex-file-router';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { aaexFileRouter } from "aaex-file-router";
 
 export default defineConfig({
   plugins: [
     react(),
     aaexFileRouter({
-      pagesDir: './src/pages', //page files location(optional: default ./src/pages)
-      outputFile: './src/routes.ts', //generated routes (default: ./src/routes.ts)
+      pagesDir: "./src/pages", //page files location(optional: default ./src/pages)
+      outputFile: "./src/routes.ts", //generated routes (default: ./src/routes.ts)
     }),
   ],
 });
@@ -57,14 +61,14 @@ export default defineConfig({
 
 ```typescript
 // src/main.tsx
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { RouterProvider, createBrowserRouter } from 'react-router-dom';
-import routes from './routes';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { RouterProvider, createBrowserRouter } from "react-router-dom";
+import routes from "./routes";
 
 const router = createBrowserRouter(routes);
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <RouterProvider router={router} />
   </React.StrictMode>
@@ -74,17 +78,21 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 ## File Conventions
 
 ### `index.tsx`
+
 Renders at the parent route path.
+
 ```
 pages/index.tsx       → "/"
 pages/about/index.tsx → "/about"
 ```
 
 ### `layout.tsx`
+
 Wraps all sibling and nested routes. Children are rendered in an `<Outlet />`.
+
 ```typescript
 // pages/admin/layout.tsx
-import { Outlet } from 'react-router-dom';
+import { Outlet } from "react-router-dom";
 
 export default function AdminLayout() {
   return (
@@ -96,8 +104,31 @@ export default function AdminLayout() {
 }
 ```
 
+### Slug files
+
+Filenames wrapper in hardbrackets `[filename]` will resolve to a dynamic route
+
+```
+pages/test/[<filename>].tsx → "/test/:<filename>"
+```
+
+```tsx
+//pages/test/[slug].tsx
+
+import { useParams } from "react-router-dom";
+
+export default function TestWithSlug() {
+  // replace slug with what the file is called
+  const { slug } = useParams();
+
+  return <div>{slug}</div>;
+}
+```
+
 ### Named files
+
 Any other `.tsx` file becomes a route based on its filename.
+
 ```
 pages/about.tsx       → "/about"
 pages/blog/post.tsx   → "/blog/post"
@@ -110,18 +141,18 @@ The plugin generates a `routes.ts` file with all your routes:
 ```typescript
 // src/routes.ts
 // AUTO GENERATED: DO NOT EDIT
-import React from 'react';
-import Index from './pages/index.tsx';
-import AdminLayout from './pages/admin/layout.tsx';
-import type { RouteObject } from 'react-router-dom';
+import React from "react";
+import Index from "./pages/index.tsx";
+import AdminLayout from "./pages/admin/layout.tsx";
+import type { RouteObject } from "react-router-dom";
 
 const routes: RouteObject[] = [
   {
-    path: '/',
+    path: "/",
     element: React.createElement(Index),
   },
   {
-    path: 'admin',
+    path: "admin",
     element: React.createElement(AdminLayout),
     children: [
       // nested routes...
@@ -134,12 +165,12 @@ export default routes;
 
 ## Route Resolution Examples
 
-| File Structure | Route Path |
-|---|---|
-| `pages/index.tsx` | `/` |
-| `pages/about.tsx` | `/about` |
-| `pages/blog/index.tsx` | `/blog` |
-| `pages/blog/post.tsx` | `/blog/post` |
+| File Structure                      | Route Path           |
+| ----------------------------------- | -------------------- |
+| `pages/index.tsx`                   | `/`                  |
+| `pages/about.tsx`                   | `/about`             |
+| `pages/blog/index.tsx`              | `/blog`              |
+| `pages/blog/post.tsx`               | `/blog/post`         |
 | `pages/admin/layout.tsx` + children | `/admin/*` (grouped) |
 
 ## Layouts
@@ -148,7 +179,7 @@ Layouts wrap their child routes and provide shared UI:
 
 ```typescript
 // pages/dashboard/layout.tsx
-import { Outlet } from 'react-router-dom';
+import { Outlet } from "react-router-dom";
 
 export default function DashboardLayout() {
   return (
@@ -164,18 +195,16 @@ export default function DashboardLayout() {
 
 All routes in `pages/dashboard/*` will render inside this layout.
 
-
 ## FileLink component
 
 The FileLink component is a type safe wrapper for the Link component in react router that uses an autogenerated type to check which routes are available.
 
-## Notice! 
-At the moment it can only do the basic routing where the "to" prop is a string.
-React routers normal Link still works in cases where the advanced functionality is more important than type safe routing.
+## Notice!
 
+At the moment it can only do the basic routing where the "to" prop is a string.
+React Router's normal Link still works in cases where type safety is less important.
 
 ## Usage
-
 
 ```ts
 // src/routeTypes.ts
@@ -183,61 +212,62 @@ React routers normal Link still works in cases where the advanced functionality 
 
 //this file is auto generated along with the route definition file
 export type FileRoutes = "/" | "test";
-        
-``` 
-
-```tsx 
-//src/pages/index.tsx
-import {FileLink} from "aaex-file-router"
-import type { FileRoutes } from "../routeTypes"
-
-export default function Home(){
-return <>
-    Hello Home! 
-    {/* FileRoutes is optional and not required it will work fine with any string if not passed */}
-
-    <FileLink<FileRoutes> to="test">Test safe</FileLink></>
-
-    //or
-    //no type safety
-    <FileLink to="some-route">Non safe</FileLink>
-} 
 ```
 
+```tsx
+//src/pages/index.tsx
+import { FileLink } from "aaex-file-router";
+import type { FileRoutes } from "../routeTypes";
+
+export default function Home() {
+  return (
+    <>
+      Hello Home!
+      {/* FileRoutes is optional and not required it will work fine with any string if not passed */}
+      <FileLink<FileRoutes> to="test">Test safe</FileLink>
+      //or //no type safety
+      <FileLink to="some-route">Non safe</FileLink>
+    </>
+  );
+}
+```
 
 ## API Reference
 
 ### FileScanner
+
 Scans the file system and converts files into a structured format.
 
 ```typescript
-import { FileScanner } from 'aaex-file-router';
+import { FileScanner } from "aaex-file-router/core";
 
-const scanner = new FileScanner('./src/pages');
+const scanner = new FileScanner("./src/pages");
 const fileData = await scanner.get_file_data();
 ```
 
 ### RouteGenerator
+
 Converts file structure into React Router route configuration.
 
 ```typescript
-import { RouteGenerator } from 'aaex-file-router';
+import { RouteGenerator } from "aaex-file-router/core";
 
 const generator = new RouteGenerator();
 const routesCode = await generator.generateComponentsMap(fileData);
 ```
 
 ### aaexFileRouter (Vite Plugin)
+
 Automatically watches for file changes and regenerates routes.
 
 ```typescript
-import { aaexFileRouter } from 'aaex-file-router';
+import { aaexFileRouter } from "aaex-file-router/core";
 
 export default defineConfig({
   plugins: [
     aaexFileRouter({
-      pagesDir: './src/pages',
-      outputFile: './src/routes.ts',
+      pagesDir: "./src/pages",
+      outputFile: "./src/routes.ts",
     }),
   ],
 });
@@ -247,7 +277,7 @@ export default defineConfig({
 
 1. **File Scanning**: Recursively scans your pages directory and builds a file tree
 2. **Route Generation**: Converts the file structure into React Router `RouteObject` format
-3. **Smart Importing**: 
+3. **Smart Importing**:
    - Top-level files use static imports for faster initial load
    - Nested/grouped routes use lazy loading for code splitting
    - Layout files are statically imported as route wrappers
@@ -262,6 +292,7 @@ export default defineConfig({
 ## Common Patterns
 
 ### Shared Layout
+
 ```sh
 pages/
 ├── layout.tsx         # Wraps entire app
@@ -270,6 +301,7 @@ pages/
 ```
 
 ### Nested Layouts
+
 ```sh
 pages/
 ├── layout.tsx                 # Root layout
@@ -280,6 +312,7 @@ pages/
 ```
 
 ### Route Groups Without Layout
+
 ```sh
 pages/
 ├── blog/
@@ -290,14 +323,17 @@ pages/
 ## Troubleshooting
 
 ### Routes not updating on file change
+
 - Ensure Vite dev server is running (`npm run dev`)
 - Check that `pagesDir` in vite config matches your actual pages directory
 
 ### Duplicate imports in generated file
+
 - This shouldn't happen, but if it does, try restarting the dev server
 - Check for files with the same name in different directories
 
 ### Unexpected route paths
+
 - Remember: `index.tsx` files inherit their parent's path
 - Directories without `layout.tsx` flatten their children into absolute routes
 - File names are converted to lowercase for routes
