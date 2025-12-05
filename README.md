@@ -2,10 +2,9 @@
 
 A file-based routing system for React projects that automatically generates routes from your file structure. Similar to Next.js App Router or Remix file conventions.
 
-## V. 1.2.0
+## V. 1.2.1
 
-Added support for slugs in urls ex: - pages - users - [id].tsx
-resolves to users/:id
+**Hotfix**: fixed all layouts importing as TestLayout now the layout for `pages/users/layout.tsx` gets imported as UsersLayout
 
 ## Features
 
