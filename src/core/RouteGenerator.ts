@@ -83,6 +83,7 @@ export class RouteGenerator {
       currentFlatten: string,
       group: boolean
     ) => {
+        //Already proccesed
       if (!file.isDirectory && this.processedFiles.has(file.relative_path))
         return;
 
@@ -104,7 +105,7 @@ export class RouteGenerator {
           return;
         }
 
-        const layoutImportName = "TestLayout";
+        const layoutImportName = file.name.charAt(0).toUpperCase() + file.name.slice(1) + "Layout";
         const layoutPath = layoutFile.relative_path.replace(/^src[\/\\]/, "./");
         this.topLevelImports.push(
           `import ${layoutImportName} from '${layoutPath}';`
