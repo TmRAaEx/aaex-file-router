@@ -2,10 +2,34 @@
 
 A file-based routing system for React projects that automatically generates routes from your file structure. Similar to Next.js App Router or Remix file conventions.
 
-## V. 1.3.0
-Routes are now able to be infinetly nested
+## V. 1.3.1
 
-**Notice** Onlyt tested 3 levels deep but there is no reason i shouldnt work further
+Routes are now able to be infinitely nested
+
+**Notice** Only tested 3 levels deep but there is no reason i shouldnt work further
+
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+  - [1. Create your pages structure](#1-create-your-pages-structure)
+  - [2. Configure Vite](#2-configure-vite)
+  - [3. Use in your app](#3-use-in-your-app)
+    - [Using createBrowserRouter](#1-using-createbrowserrouter-recommended-for-most-users)
+    - [Using nested Route elements](#2-using-nested-route-elements)
+- [File Conventions](#file-conventions)
+- [Generated Routes File](#generated-routes-file)
+- [Route Resolution Examples](#route-resolution-examples)
+- [Layouts](#layouts)
+- [FileLink component](#filelink-component)
+- [Usage](#usage)
+- [API Reference](#api-reference)
+- [How It Works](#how-it-works)
+- [Performance Considerations](#performance-considerations)
+- [Common Patterns](#common-patterns)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
 
 ## Features
 
@@ -44,7 +68,7 @@ src/pages/
 // vite.config.ts
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { aaexFileRouter } from "aaex-file-router";
+import { aaexFileRouter } from "aaex-file-router/plugin";
 
 export default defineConfig({
   plugins: [
@@ -59,20 +83,66 @@ export default defineConfig({
 
 ### 3. Use in your app
 
+#### 1. Using createBrowserRouter (recommended for most users)
+
 ```typescript
-// src/main.tsx
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { RouterProvider, createBrowserRouter } from "react-router-dom";
+// src/App.tsx
+import "./App.css";
 import routes from "./routes";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { Suspense } from "react";
 
-const router = createBrowserRouter(routes);
+function App() {
+  const router = createBrowserRouter(routes);
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <RouterProvider router={router} />
-  </React.StrictMode>
-);
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <RouterProvider router={router} />
+    </Suspense>
+  );
+}
+
+export default App;
+```
+
+## **OR**
+
+### 2. using nested Route elements
+
+**Note** I will probably create a custom route provider using this version later since this is the only solution that works with VITE-SSR if you wrap client in `<BrowserRouter/>` and server in `<StaticRouter/>`
+
+```tsx
+//src/App.tsx
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  type RouteObject,
+} from "react-router-dom";
+import routes from "./routes";
+import { Suspense } from "react";
+import "./App.css";
+
+//recursivly creates nested routes
+function createRoutes(route: RouteObject) {
+  return (
+    <Route key={route.path} path={route.path} element={route.element}>
+      {route.children?.map((child) => createRoutes(child))}
+    </Route>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Suspense fallback={<div>Loading...</div>}>
+        <Routes>{routes.map((route) => createRoutes(route))}</Routes>
+      </Suspense>
+    </BrowserRouter>
+  );
+}
+
+export default App;
 ```
 
 ## File Conventions
@@ -106,14 +176,14 @@ export default function AdminLayout() {
 
 ### Slug files
 
-Filenames wrapper in hardbrackets `[filename]` will resolve to a dynamic route
+Filenames wrapper in square brackets `[filename]` will resolve to a dynamic route
 
 ```
-pages/test/[<filename>].tsx → "/test/:<filename>"
+src/pages/test/[<filename>].tsx → "/test/:<filename>"
 ```
 
 ```tsx
-//pages/test/[slug].tsx
+// src/pages/test/[slug].tsx
 
 import { useParams } from "react-router-dom";
 
@@ -165,20 +235,20 @@ export default routes;
 
 ## Route Resolution Examples
 
-| File Structure                      | Route Path           |
-| ----------------------------------- | -------------------- |
-| `pages/index.tsx`                   | `/`                  |
-| `pages/about.tsx`                   | `/about`             |
-| `pages/blog/index.tsx`              | `/blog`              |
-| `pages/blog/post.tsx`               | `/blog/post`         |
-| `pages/admin/layout.tsx` + children | `/admin/*` (grouped) |
+| File Structure                          | Route Path           |
+| --------------------------------------- | -------------------- |
+| `src/pages/index.tsx`                   | `/`                  |
+| `src/pages/about.tsx`                   | `/about`             |
+| `src/pages/blog/index.tsx`              | `/blog`              |
+| `src/pages/blog/post.tsx`               | `/blog/post`         |
+| `src/pages/admin/layout.tsx` + children | `/admin/*` (grouped) |
 
 ## Layouts
 
 Layouts wrap their child routes and provide shared UI:
 
 ```typescript
-// pages/dashboard/layout.tsx
+// src/pages/dashboard/layout.tsx
 import { Outlet } from "react-router-dom";
 
 export default function DashboardLayout() {
@@ -193,7 +263,7 @@ export default function DashboardLayout() {
 }
 ```
 
-All routes in `pages/dashboard/*` will render inside this layout.
+All routes in `src/pages/dashboard/*` will render inside this layout.
 
 ## FileLink component
 
@@ -215,7 +285,7 @@ export type FileRoutes = "/" | "test";
 ```
 
 ```tsx
-//src/pages/index.tsx
+// src/pages/index.tsx
 import { FileLink } from "aaex-file-router";
 import type { FileRoutes } from "../routeTypes";
 
@@ -225,7 +295,7 @@ export default function Home() {
       Hello Home!
       {/* FileRoutes is optional and not required it will work fine with any string if not passed */}
       <FileLink<FileRoutes> to="test">Test safe</FileLink>
-      //or //no type safety
+      {/* or without type safety */}
       <FileLink to="some-route">Non safe</FileLink>
     </>
   );
@@ -261,7 +331,7 @@ const routesCode = await generator.generateComponentsMap(fileData);
 Automatically watches for file changes and regenerates routes.
 
 ```typescript
-import { aaexFileRouter } from "aaex-file-router/core";
+import { aaexFileRouter } from "aaex-file-router/plugin";
 
 export default defineConfig({
   plugins: [

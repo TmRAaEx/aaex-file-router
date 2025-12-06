@@ -1,8 +1,8 @@
 import { Plugin } from "vite";
 import { promises as fs } from "node:fs";
 import path from "path";
-import { FileScanner } from "./core/FileScanner.js";
-import { RouteGenerator } from "./core/RouteGenerator.js";
+import { FileScanner } from "../core/FileScanner.js";
+import { RouteGenerator } from "../core/RouteGenerator.js";
 
 export interface VitePluginOptions {
   pagesDir?: string;
