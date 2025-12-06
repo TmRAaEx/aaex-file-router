@@ -108,7 +108,7 @@ export class RouteGenerator {
 
     const fallback = folderLoadingName
       ? `React.createElement(${folderLoadingName})`
-      : `<div>Loading...</div>`;
+      : `React.createElement('div',null,'loading...')`;
 
     const elementString = `React.createElement(React.Suspense, { fallback: ${fallback} }, React.createElement(React.lazy(() => import('./${file.relative_path.replace(
       /^src[\/\\]/,
