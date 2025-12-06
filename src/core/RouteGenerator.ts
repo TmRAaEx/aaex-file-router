@@ -3,7 +3,7 @@ import { FileData } from "./FileScanner";
 
 interface RouteConfig {
   path: string;
-  element: string;
+  element?: string;
   children?: RouteConfig[];
 }
 
@@ -83,9 +83,11 @@ export class RouteGenerator {
       currentFlatten: string,
       group: boolean
     ) => {
-        //Already proccesed
+      //Already proccesed
       if (!file.isDirectory && this.processedFiles.has(file.relative_path))
         return;
+
+      console.log("currently proccesing:", file.name);
 
       if (file.isDirectory && file.children?.length) {
         const layoutFile = file.children.find(
@@ -93,19 +95,39 @@ export class RouteGenerator {
         );
 
         if (!layoutFile) {
-          const newFlatten = posixJoin(currentFlatten, file.name.toLowerCase());
-          routes.push(
-            ...this.fileDataToRoutes(
-              file.children,
-              currentParentPath,
-              newFlatten,
-              false
-            )
-          );
+          const childRoutes: RouteConfig[] = [];
+          for (const child of file.children.filter(
+            (c) => !/^layout\.(tsx|jsx|ts|js)$/i.test(c.name)
+          )) {
+            if (child.isDirectory) {
+              processFile(
+                child,
+                posixJoin(currentParentPath, file.name),
+                "",
+                true
+              );
+            } else {
+              const childNameWithoutExt = child.name.replace(/\.[jt]sx?$/, "");
+              const path =
+                childNameWithoutExt.toLowerCase() === "index"
+                  ? ""
+                  : normalizeDynamicSegment(childNameWithoutExt.toLowerCase());
+              childRoutes.push(createRoute(child, path, undefined, true));
+              this.processedFiles.add(child.relative_path);
+            }
+          }
+
+          routes.push({
+            path: normalizeDynamicSegment(file.name.toLowerCase()),
+            children: childRoutes.length ? childRoutes : undefined,
+          });
           return;
         }
 
-        const layoutImportName = file.name.charAt(0).toUpperCase() + file.name.slice(1) + "Layout";
+        console.log("Processing layout for", file.name);
+
+        const layoutImportName =
+          file.name.charAt(0).toUpperCase() + file.name.slice(1) + "Layout";
         const layoutPath = layoutFile.relative_path.replace(/^src[\/\\]/, "./");
         this.topLevelImports.push(
           `import ${layoutImportName} from '${layoutPath}';`
