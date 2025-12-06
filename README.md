@@ -2,9 +2,10 @@
 
 A file-based routing system for React projects that automatically generates routes from your file structure. Similar to Next.js App Router or Remix file conventions.
 
-## V. 1.2.1
+## V. 1.3.0
+Routes are now able to be infinetly nested
 
-**Hotfix**: fixed all layouts importing as TestLayout now the layout for `pages/users/layout.tsx` gets imported as UsersLayout
+**Notice** Onlyt tested 3 levels deep but there is no reason i shouldnt work further
 
 ## Features
 

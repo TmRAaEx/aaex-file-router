@@ -1,248 +1,138 @@
-import { FileData } from "./FileScanner";
-// import path from "path";
-
 interface RouteConfig {
   path: string;
   element?: string;
   children?: RouteConfig[];
 }
 
+interface FileNode {
+  name: string;
+  relative_path: string;
+  parent_path: string;
+  isDirectory: boolean;
+  children?: FileNode[];
+}
+
 export class RouteGenerator {
   private topLevelImports: string[] = [];
   private importSet: Set<string> = new Set();
-  private processedFiles: Set<string> = new Set();
 
   /**
-   * Recursively converts FileData tree into React Router RouteConfig array
-   * Handles layout files, index files, and nested routes with proper pathing
-   * @param fileData - Array of files/folders to process
-   * @param parentPath - Current path context for nested routes (empty for root)
+   * Converts a FileData-like tree into React Router routes
+   * @param files - Array of file/folder objects passed externally
+   * @param parentPath - Current path for recursion
    */
   private fileDataToRoutes(
-    fileData: FileData[],
+    files: FileNode[],
     parentPath = "",
-    flattenPrefix = "",
-    inGroup = false
+    isChild = false
   ): RouteConfig[] {
     const routes: RouteConfig[] = [];
-    const processedIndexes = new Set<string>();
 
-    /** Converts `[slug]` → `:slug` */
-    const normalizeDynamicSegment = (name: string) =>
-      name.replace(/\[([^\]]+)\]/g, ":$1");
+    const normalizeSegment = (name: string) =>
+      name.replace(/\[([^\]]+)\]/g, ":$1").toLowerCase();
 
-    /**
-     * Utility function to safely join path segments
-     * - Filters out empty/falsy parts to avoid "///" in paths
-     * - Joins with "/" separator
-     * - Replaces all backslashes with forward slashes for cross-platform consistency
-     * Example: posixJoin("test", "", "hello") -> "test/hello"
-     * Example: posixJoin("pages\\test", "hello") -> "pages/test/hello"
-     */
-    const posixJoin = (...parts: string[]) =>
-      parts.filter(Boolean).join("/").replace(/\\/g, "/");
-
-    /** Converts "user", "[id]" → "User", "Id" */
     const toPascal = (str: string) =>
       str
         .replace(/\[|\]/g, "")
         .replace(/(^\w|[-_]\w)/g, (m) => m.replace(/[-_]/, "").toUpperCase());
 
-    /** Build import name from parent folder + file */
-    const getImportName = (file: FileData) => {
-      const segments = file.relative_path.replace(/^src[\/\\]/, "").split("/");
-      const parentFolder =
-        segments.length > 1 ? segments[segments.length - 2] : "";
-      const parentName = parentFolder ? toPascal(parentFolder) : "";
+    const getImportName = (file: FileNode, parentPath: string) => {
       const nameWithoutExt = file.name.replace(/\.[jt]sx?$/, "");
-      const fileNamePart =
-        nameWithoutExt.toLowerCase() === "index"
-          ? ""
-          : toPascal(nameWithoutExt);
-      return `${parentName}${fileNamePart}`;
+      if (nameWithoutExt.toLowerCase() === "index" && parentPath) {
+        // Use parent folder prefix for nested index
+        const segments = parentPath.split("/").filter(Boolean);
+        return toPascal(segments.join("")) + "Index";
+      }
+      return toPascal(nameWithoutExt);
     };
 
-    /** Create route object (handles lazy vs top-level import) */
-    const createRoute = (
-      file: FileData,
-      path: string,
-      importName?: string,
-      lazy = false
-    ): RouteConfig => {
-      const filePath = file.relative_path.replace(/^src[\/\\]/, "./");
-      const element = lazy
-        ? `React.createElement(React.lazy(() => import('${filePath}')))`
-        : `React.createElement(${importName})`;
-      return { path: normalizeDynamicSegment(path), element };
-    };
-
-    /** Recursive processing */
-    const processFile = (
-      file: FileData,
-      currentParentPath: string,
-      currentFlatten: string,
-      group: boolean
-    ) => {
-      //Already proccesed
-      if (!file.isDirectory && this.processedFiles.has(file.relative_path))
-        return;
-
-      console.log("currently proccesing:", file.name);
-
-      if (file.isDirectory && file.children?.length) {
-        const layoutFile = file.children.find(
-          (c) => !c.isDirectory && /^layout\.(tsx|jsx|ts|js)$/i.test(c.name)
+    for (const file of files) {
+      if (file.isDirectory) {
+        const layout = file.children?.find(
+          (f) => !f.isDirectory && /^layout\.(tsx|jsx|ts|js)$/i.test(f.name)
         );
 
-        if (!layoutFile) {
-          const childRoutes: RouteConfig[] = [];
-          for (const child of file.children.filter(
-            (c) => !/^layout\.(tsx|jsx|ts|js)$/i.test(c.name)
-          )) {
-            if (child.isDirectory) {
-              processFile(
-                child,
-                posixJoin(currentParentPath, file.name),
-                "",
-                true
-              );
-            } else {
-              const childNameWithoutExt = child.name.replace(/\.[jt]sx?$/, "");
-              const path =
-                childNameWithoutExt.toLowerCase() === "index"
-                  ? ""
-                  : normalizeDynamicSegment(childNameWithoutExt.toLowerCase());
-              childRoutes.push(createRoute(child, path, undefined, true));
-              this.processedFiles.add(child.relative_path);
-            }
-          }
+        const route: RouteConfig = {
+          path: normalizeSegment(file.name),
+        };
 
-          routes.push({
-            path: normalizeDynamicSegment(file.name.toLowerCase()),
-            children: childRoutes.length ? childRoutes : undefined,
-          });
-          return;
-        }
-
-        console.log("Processing layout for", file.name);
-
-        const layoutImportName =
-          file.name.charAt(0).toUpperCase() + file.name.slice(1) + "Layout";
-        const layoutPath = layoutFile.relative_path.replace(/^src[\/\\]/, "./");
-        this.topLevelImports.push(
-          `import ${layoutImportName} from '${layoutPath}';`
-        );
-        this.processedFiles.add(layoutFile.relative_path);
-
-        const childRoutes: RouteConfig[] = [];
-        for (const child of file.children.filter(
-          (c) => !/^layout\.(tsx|jsx|ts|js)$/i.test(c.name)
-        )) {
-          if (child.isDirectory) {
-            processFile(
-              child,
-              posixJoin(currentParentPath, file.name),
-              "",
-              true
+        if (layout) {
+          const importName = `${toPascal(file.name)}Layout`;
+          const importPath = `./${layout.relative_path.replace(
+            /^src[\/\\]/,
+            ""
+          )}`;
+          if (!this.importSet.has(layout.relative_path)) {
+            this.topLevelImports.push(
+              `import ${importName} from '${importPath}';`
             );
-          } else {
-            const childNameWithoutExt = child.name.replace(/\.[jt]sx?$/, "");
-            const path =
-              childNameWithoutExt.toLowerCase() === "index"
-                ? ""
-                : normalizeDynamicSegment(childNameWithoutExt.toLowerCase());
-            childRoutes.push(createRoute(child, path, undefined, true));
-            this.processedFiles.add(child.relative_path);
+            this.importSet.add(layout.relative_path);
+          }
+          route.element = `React.createElement(${importName})`;
+        }
+
+        if (file.children?.length) {
+          const children = file.children.filter(
+            (f) => !/^layout\.(tsx|jsx|ts|js)$/i.test(f.name)
+          );
+          if (children.length) {
+            // Pass true for isChild to make children paths relative
+            route.children = this.fileDataToRoutes(children, route.path, true);
           }
         }
 
-        routes.push({
-          path: normalizeDynamicSegment(file.name.toLowerCase()),
-          element: `React.createElement(${layoutImportName})`,
-          children: childRoutes.length ? childRoutes : undefined,
-        });
+        routes.push(route);
+      } else {
+        const nameWithoutExt = file.name.replace(/\.[jt]sx?$/, "");
+        const isIndex = nameWithoutExt.toLowerCase() === "index";
 
-        return;
-      }
+        // If child, path is relative; otherwise, top-level gets full path
+        let pathSegment = isIndex ? "" : normalizeSegment(nameWithoutExt);
+        if (isChild) {
+          // Children always use relative paths
+          pathSegment = pathSegment;
+        } else {
+          pathSegment = parentPath
+            ? `${parentPath}/${pathSegment}`
+            : pathSegment;
+        }
 
-      // ---------------- FILES ----------------
-      const nameWithoutExt = file.name.replace(/\.[jt]sx?$/, "");
-      const isIndex = nameWithoutExt.toLowerCase() === "index";
-
-      if (isIndex && processedIndexes.has(file.relative_path)) return;
-
-      if (
-        fileData.some(
-          (f) =>
-            f.isDirectory &&
-            f.name.toLowerCase() === nameWithoutExt.toLowerCase()
-        ) ||
-        /^layout\.(tsx|jsx|ts|js)$/i.test(file.name)
-      ) {
-        this.processedFiles.add(file.relative_path);
-        return;
-      }
-
-      const rawSegment = isIndex ? "" : nameWithoutExt.toLowerCase();
-      const fileSegment = normalizeDynamicSegment(rawSegment);
-
-      let fullPath: string;
-      if (currentFlatten) fullPath = posixJoin(currentFlatten, fileSegment);
-      else if (group) fullPath = fileSegment;
-      else if (currentParentPath)
-        fullPath = posixJoin(currentParentPath, fileSegment);
-      else fullPath = isIndex ? "/" : fileSegment;
-
-      const importName = getImportName(file);
-
-      if (group) routes.push(createRoute(file, fullPath, undefined, true));
-      else {
+        const importName = getImportName(file, parentPath);
+;
+        const importPath = `./${file.relative_path.replace(/^src[\/\\]/, "")}`;
         if (!this.importSet.has(file.relative_path)) {
           this.topLevelImports.push(
-            `import ${importName} from './${file.relative_path.replace(
-              /^src[\/\\]/,
-              ""
-            )}';`
+            `import ${importName} from '${importPath}';`
           );
           this.importSet.add(file.relative_path);
         }
-        routes.push(createRoute(file, fullPath, importName));
+
+        routes.push({
+          path: pathSegment,
+          element: `React.createElement(${importName})`,
+        });
       }
-
-      this.processedFiles.add(file.relative_path);
-      if (isIndex) processedIndexes.add(file.relative_path);
-    };
-
-    for (const file of fileData)
-      processFile(file, parentPath, flattenPrefix, inGroup);
+    }
 
     return routes;
   }
 
   /**
-   * Generates a complete routes configuration file as a string
-   * Includes all imports and route definitions in valid TypeScript/React code
-   * @param fileData - FileData tree from FileScanner
-   * @returns Complete routes file content ready to be written to disk
+   * Generates a React Router routes file as a string
+   * @param fileData - FileData-like tree
    */
-  public async generateComponentsMap(fileData: FileData[]): Promise<string> {
-    // reset import & processed tracking each generation to avoid duplication across regen
+  public async generateRoutesFile(fileData: FileNode[]): Promise<string> {
     this.topLevelImports = [];
     this.importSet = new Set();
-    this.processedFiles = new Set();
 
     const routes = this.fileDataToRoutes(fileData);
 
-    const routesString = JSON.stringify(routes, null, 2)
-      // lazy imports were serialized as strings, restore them to function calls
-      .replace(
-        /"React\.createElement\(React\.lazy\(\(\) => import\('(.*)'\)\)\)"/g,
-        "React.createElement(React.lazy(() => import('$1')))"
-      )
-      // React.createElement(Component) serialized as string, unquote it
-      .replace(/"React\.createElement\((\w+)\)"/g, "React.createElement($1)");
+    const routesString = JSON.stringify(routes, null, 2).replace(
+      /"React\.createElement\((\w+)\)"/g,
+      "React.createElement($1)"
+    );
 
-    const mapString = `//* AUTO GENERATED: DO NOT EDIT
+    return `//* AUTO GENERATED: DO NOT EDIT
 import React from 'react';
 ${this.topLevelImports.join("\n")}
 import type { RouteObject } from 'react-router-dom';
@@ -251,47 +141,35 @@ const routes: RouteObject[] = ${routesString};
 
 export default routes;
 `;
-
-    return mapString;
   }
 
   /**
-   * Generates a TypeScript definition file exporting a union type of all route paths
-   * @param fileData - FileData tree from FileScanner
-   * @returns Type definition file content as string
+   * Generates TypeScript type definition for all route paths
+   * @param fileData - FileData-like tree
    */
-  public async generateRoutesTypeDef(fileData: FileData[]): Promise<string> {
-    // Reset state
-    this.topLevelImports = [];
-    this.importSet = new Set();
-    this.processedFiles = new Set();
-
+  public async generateRoutesTypeDef(fileData: FileNode[]): Promise<string> {
     const routes = this.fileDataToRoutes(fileData);
 
-    const routePaths: string[] = [];
+    const paths: string[] = [];
 
-    const addRoute = (route: RouteConfig, parentPath = "") => {
-      const fullPath = parentPath
-        ? `${parentPath}/${route.path}`.replace(/\/+/g, "/")
-        : route.path;
-
-      // Replace ":param" with ${string} for TypeScript type
-      const tsPath = fullPath
-        .split("/")
-        .map((seg) => (seg.startsWith(":") ? "${string}" : seg))
-        .join("/");
-
-      routePaths.push(tsPath);
-
-      if (route.children?.length) {
-        route.children.forEach((child) => addRoute(child, fullPath));
+    const collectPaths = (routes: RouteConfig[], parentPath = "") => {
+      for (const route of routes) {
+        const fullPath = parentPath
+          ? `${parentPath}/${route.path}`.replace(/\/+/g, "/")
+          : route.path;
+        const tsPath = fullPath
+          .split("/")
+          .map((seg) => (seg.startsWith(":") ? "${string}" : seg))
+          .join("/");
+        paths.push(tsPath);
+        if (route.children) collectPaths(route.children, fullPath);
       }
     };
 
-    routes.forEach((route) => addRoute(route));
+    collectPaths(routes);
 
-    const uniquePaths = Array.from(new Set(routePaths))
-      .map((p) => `\`${p}\``) // wrap in backticks for template literal types
+    const uniquePaths = Array.from(new Set(paths))
+      .map((p) => `\`${p}\``)
       .join(" | ");
 
     return `// * AUTO GENERATED: DO NOT EDIT
