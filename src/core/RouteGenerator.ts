@@ -1,6 +1,6 @@
 interface RouteConfig {
   path: string;
-  element?: any; // now actual React elements
+  element?: any;
   children?: RouteConfig[];
 }
 
@@ -14,11 +14,15 @@ interface FileNode {
 
 export class RouteGenerator {
   private topLevelImports: string[] = [];
-  private importSet: Set<string> = new Set(); // avoid duplicate imports
+  private importSet: Set<string> = new Set();
 
   // ---------------- Helpers ----------------
   private normalizeSegment(name: string) {
     return name.replace(/\[([^\]]+)\]/g, ":$1").toLowerCase();
+  }
+
+  private normalizeTypeSegment(name: string) {
+    return name.replace(/\[([^\]]+)\]/g, "{string}");
   }
 
   private toPascal(str: string) {
@@ -45,45 +49,43 @@ export class RouteGenerator {
   }
 
   // ---------------- Route Creation ----------------
-
   private createDirectoryRoute(file: FileNode): RouteConfig {
     const route: RouteConfig = { path: this.normalizeSegment(file.name) };
 
-    // Layout component (static import)
-    const layout = file.children?.find(
-      (f) => !f.isDirectory && /^layout\.(tsx|jsx|ts|js)$/i.test(f.name)
+    const layout = file.children?.find((f) =>
+      /^layout\.(tsx|jsx|ts|js)$/i.test(f.name)
     );
+
     if (layout) {
       const importName = `${this.toPascal(file.name)}Layout`;
       this.addImport(layout, importName);
       route.element = `React.createElement(${importName})`;
     }
 
-    // Folder-specific loading.tsx (static import)
-    const loadingFile = file.children?.find(
-      (f) => !f.isDirectory && /^loading\.(tsx|jsx|ts|js)$/i.test(f.name)
+    const loadingFile = file.children?.find((f) =>
+      /^loading\.(tsx|jsx|ts|js)$/i.test(f.name)
     );
+
     let loadingName: string | null = null;
+
     if (loadingFile) {
       loadingName = this.getImportName(loadingFile, file.relative_path);
       this.addImport(loadingFile, loadingName);
     }
 
-    // Children (exclude layout and loading)
-    if (file.children?.length) {
-      const children = file.children.filter(
-        (f) =>
-          !/^layout\.(tsx|jsx|ts|js)$/i.test(f.name) &&
-          !/^loading\.(tsx|jsx|ts|js)$/i.test(f.name)
+    const children = file.children?.filter(
+      (f) =>
+        !/^layout\.(tsx|jsx|ts|js)$/i.test(f.name) &&
+        !/^loading\.(tsx|jsx|ts|js)$/i.test(f.name)
+    );
+
+    if (children?.length) {
+      route.children = this.fileDataToRoutes(
+        children,
+        route.path,
+        true,
+        loadingName
       );
-      if (children.length) {
-        route.children = this.fileDataToRoutes(
-          children,
-          route.path,
-          true,
-          loadingName
-        );
-      }
     }
 
     return route;
@@ -93,7 +95,7 @@ export class RouteGenerator {
     file: FileNode,
     parentPath: string,
     isChild: boolean,
-    folderLoadingName: string | null = null
+    folderLoadingName: string | null
   ): RouteConfig {
     const nameWithoutExt = file.name.replace(/\.[jt]sx?$/, "");
     const isIndex = nameWithoutExt.toLowerCase() === "index";
@@ -104,7 +106,6 @@ export class RouteGenerator {
     const importName = this.getImportName(file, parentPath);
     this.addImport(file, importName);
 
-    // Lazy + Suspense as string
     const fallback = folderLoadingName
       ? `React.createElement(${folderLoadingName})`
       : `<div>Loading...</div>`;
@@ -114,14 +115,10 @@ export class RouteGenerator {
       ""
     )}'))))`;
 
-    return {
-      path: pathSegment,
-      element: elementString,
-    };
+    return { path: pathSegment, element: elementString };
   }
 
-  // ---------------- Recursion ----------------
-
+  // ---------------- Route Recursion ----------------
   private fileDataToRoutes(
     files: FileNode[],
     parentPath = "",
@@ -135,9 +132,45 @@ export class RouteGenerator {
     );
   }
 
-  // ---------------- Code Generation ----------------
+  // ---------------- Type Helpers ----------------
+  private collectPaths(files: FileNode[], prefix = ""): string[] {
+    let result: string[] = [];
 
-  public async generateRoutesFile(fileData: FileNode[]): Promise<string> {
+    for (const file of files) {
+      if (file.isDirectory) {
+        const newPrefix = `${prefix}/${this.normalizeTypeSegment(file.name)}`;
+        result.push(newPrefix);
+
+        if (file.children?.length) {
+          result.push(...this.collectPaths(file.children, newPrefix));
+        }
+      } else {
+        const clean = file.name.replace(/\.[jt]sx?$/, "");
+
+        if (clean === "layout" || clean === "loading") continue;
+
+        if (clean === "index") {
+          result.push(prefix || "/");
+        } else {
+          result.push(`${prefix}/${this.normalizeTypeSegment(clean)}`);
+        }
+      }
+    }
+
+    return result;
+  }
+
+  private buildTypeUnion(paths: string[]): string {
+    const normalized = [...new Set(paths)]
+      .map((p) => p.replace(/\/+/g, "/"))
+      .map((p) => (p === "" ? "/" : p))
+      .sort();
+
+    return normalized.map((p) => `  | "${p}"`).join("\n");
+  }
+
+  // ---------------- PUBLIC METHODS ----------------
+  public generateRoutesFile(fileData: FileNode[]): string {
     this.topLevelImports = [];
     this.importSet.clear();
 
@@ -149,12 +182,22 @@ ${this.topLevelImports.join("\n")}
 import type { RouteObject } from 'react-router-dom';
 
 const routes: RouteObject[] = ${JSON.stringify(routes, null, 2).replace(
-      /"React\.createElement\(([^)]+)\)"/g,
-      "React.createElement($1)"
-    )};
+      /"React\.createElement\(([\s\S]*?)\)"/g,
+      (_, inner) => `React.createElement(${inner})`
+    )}
 
 
 export default routes;
+`;
+  }
+
+  public generateTypesFile(fileData: FileNode[]): string {
+    const paths = this.collectPaths(fileData, "");
+    const union = this.buildTypeUnion(paths);
+
+    return `// AUTO-GENERATED: DO NOT EDIT
+export type FileRoutes =
+${union};
 `;
   }
 }

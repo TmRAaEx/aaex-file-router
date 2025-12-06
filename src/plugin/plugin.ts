@@ -44,8 +44,8 @@ export function aaexFileRouter(options: VitePluginOptions = {}): Plugin {
             generator = new RouteGenerator();
 
             const fileData = await scanner.get_file_data();
-            const routesCode = await generator.generateRoutesFile(fileData);
-            const routesType = await generator.generateRoutesTypeDef(fileData);
+            const routesCode = generator.generateRoutesFile(fileData);
+            const routesType = generator.generateTypesFile(fileData);
 
             // Write routes file
             await fs.writeFile(outputFile, routesCode, "utf-8");
