@@ -2,7 +2,7 @@
 
 A file-based routing system for React projects that automatically generates routes from your file structure. Similar to Next.js App Router or Remix file conventions.
 
-## V. 1.4.4 
+## V. 1.4.5 
 **Bugfixes**
 
 Added support for loading components
