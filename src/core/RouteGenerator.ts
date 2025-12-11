@@ -139,27 +139,31 @@ export class RouteGenerator {
 
     const importName = this.getPrefixedName(file, parentPath, "");
 
-    if (!isChild) {
-      // Top-level: static import
-      this.addImport(file, importName);
+    // if (!isChild) {
+    //   // Top-level: static import
+    //   this.addImport(file, importName);
+    //   return {
+    //     path: pathSegment,
+    //     element: `React.createElement(${importName})`,
+    //   };
+    // }
+    this.addImport(file, importName);
       return {
         path: pathSegment,
         element: `React.createElement(${importName})`,
-      };
-    }
 
-    // Nested: lazy + Suspense
-    const fallback = folderLoadingName
-      ? `React.createElement(${folderLoadingName})`
-      : `React.createElement('div', null, 'loading...')`;
+    // // Nested: lazy + Suspense
+    // const fallback = folderLoadingName
+    //   ? `React.createElement(${folderLoadingName})`
+    //   : `React.createElement('div', null, 'loading...')`;
 
-    return {
-      path: pathSegment,
-      element: `React.createElement(React.Suspense, { fallback: ${fallback} }, React.createElement(React.lazy(() => import('./${file.relative_path.replace(
-        /^src[\/\\]/,
-        ""
-      )}'))))`,
-    };
+    // return {
+    //   path: pathSegment,
+    //   element: `React.createElement(React.Suspense, { fallback: ${fallback} }, React.createElement(React.lazy(() => import('./${file.relative_path.replace(
+    //     /^src[\/\\]/,
+    //     ""
+    //   )}'))))`,
+    // };
   }
 
   // ---------------- Route Recursion ----------------
