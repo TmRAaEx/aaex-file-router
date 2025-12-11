@@ -2,10 +2,9 @@
 
 A file-based routing system for React projects that automatically generates routes from your file structure. Similar to Next.js App Router or Remix file conventions.
 
-## V. 1.4.5 
-**Bugfixes**
+## V. 1.5.0
 
-Added support for loading components
+Removed loading support for framework purpose, might add later in another way
 
 ## Table of Contents
 
@@ -176,7 +175,7 @@ export default function AdminLayout() {
 }
 ```
 
-### `loading.tsx`
+### `loading.tsx` (Deprecated)
 
 Folder level loading component <br>
 Autmatically gets rendered instead of files waiting on lazy import
@@ -288,7 +287,9 @@ All routes in `src/pages/dashboard/*` will render inside this layout.
 | Files inside a folder without layout  |     |     | Lazy loaded   |     |
 | layout.tsx                            |     |     | Static import |
 | loading.tsx                           |     |     | Static import |
---- 
+
+---
+
 Top-level pages are always statically imported for faster initial navigation.
 All nested pages are lazy-loaded and wrapped in a Suspense boundary.
 
