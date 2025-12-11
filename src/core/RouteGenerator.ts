@@ -167,7 +167,7 @@ export class RouteGenerator {
   }
 
   // ---------------- Route Recursion ----------------
-
+  }
   /** Recursively convert FileNode array into RouteConfig array */
   private fileDataToRoutes(
     files: FileNode[],
