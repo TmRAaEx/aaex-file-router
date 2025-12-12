@@ -316,7 +316,7 @@ ${this.topLevelImports.join("\n")}
 
 const serverRoutes: any[] = ${JSON.stringify(routes, null, 2).replace(
       /"React\.createElement\(([\s\S]*?)\)"/g,
-      (_, inner) => `React.createElement(${inner})`
+      (_, inner) => `${inner}`
     )};
 
 export default serverRoutes;
