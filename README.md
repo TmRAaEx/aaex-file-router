@@ -2,9 +2,9 @@
 
 A file-based routing system for React projects that automatically generates routes from your file structure. Similar to Next.js App Router or Remix file conventions.
 
-## V. 1.5.0
+## V. 1.6.0
 
-Removed loading support for framework purpose, might add later in another way
+Added server side routing mainly for AaExJS but it also works inside vite SSR.
 
 ## Table of Contents
 
@@ -414,6 +414,41 @@ export default defineConfig({
   ],
 });
 ```
+
+## Server routing
+
+If you are using vite SSR you want to configure your vite config with the serverRouter plugin instead of the normal one.
+
+```ts
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { aaexServerRouter } from "aaex-file-router/plugin";
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react(), aaexServerRouter()],
+});
+```
+
+this plugin generates 2 route files
+
+### 1. server-routes.ts
+
+Includes absolute path to the file `modulePath`
+
+route example:
+
+```ts
+{
+    "path": "",
+    "element": React.createElement(Index),
+    "modulePath": "C:/Users/tmraa/OneDrive/Dokument/AaExJS-documentation/test-app/src/pages/index.tsx"
+  },
+```
+
+### 2. client-routes.ts
+
+Just the normal route file.
 
 ## How It Works
 
