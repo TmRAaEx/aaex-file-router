@@ -3,7 +3,7 @@
     "jsx": "react-jsx",
     "target": "esnext",
     "module": "esnext",
-    "lib": ["ESNext"],
+    "lib": ["ESNext", "dom"],
     "outDir": "./dist",
     "rootDir": "./src",
     "declaration": true,
