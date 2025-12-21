@@ -12,9 +12,6 @@ export function FileLink<RouteType extends string = string>({
 }: FileLinkProps<RouteType>) {
   const isServer = typeof window === "undefined";
 
-  console.log("isServer", isServer);
-  
-
   if (isServer) {
     //supports server side routing 
     return <a href={to as string}>{children}</a>;

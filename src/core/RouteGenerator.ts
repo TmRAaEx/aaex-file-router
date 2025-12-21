@@ -259,6 +259,7 @@ export class RouteGenerator {
     // Build route path
     const nameWithoutExt = fileName.replace(/\.[jt]sx?$/, "");
     const isIndex = nameWithoutExt.toLowerCase() === "index";
+    // const isRootLayout = nameWithoutExt.toLowerCase() === "rootlayout"
 
     let pathSegment = isIndex ? "" : this.normalizeSegment(nameWithoutExt);
     if (!isChild && parentPath) {

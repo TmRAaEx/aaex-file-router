@@ -1,5 +1,3 @@
-
-export { FileScanner, FileData } from './FileScanner.js';
-export { RouteGenerator } from './RouteGenerator.js';
-// export type { FileData } from './core/types';
-
+export { FileScanner } from "./FileScanner.js";
+export { RouteGenerator } from "./RouteGenerator.js";
+export type { FileData } from "./FileScanner.js";
