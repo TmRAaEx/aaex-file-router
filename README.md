@@ -2,9 +2,8 @@
 
 A file-based routing system for React projects that automatically generates routes from your file structure. Similar to Next.js App Router or Remix file conventions.
 
-## V. 1.6.3
-
-Added server side routing mainly for AaExJS but it also works inside vite SSR.
+## V. 1.6.4
+Hopefully made code editors able to autocomplete and suggest imorts from the package
 
 ## Table of Contents
 

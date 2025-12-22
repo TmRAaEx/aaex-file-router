@@ -1,13 +1,14 @@
 {
   "name": "aaex-file-router",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "description": "A file-based routing system for React projects that automatically generates routes from your file structure. Similar to Next.js App Router or Remix file conventions.",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "node ./dist/test/index.js",
     "build": "npx tsc",
     "dev": "npx tsc --watch",
-    "release": "npx tsc && npm publish "
+    "release": "npx tsc && npm publish"
   },
   "keywords": [
     "react",
@@ -15,9 +16,21 @@
     "vite-plugin"
   ],
   "exports": {
-    ".": "./dist/index.js",
-    "./core": "./dist/core/index.js",
-    "./plugin": "./dist/plugin/index.js"
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./core": {
+      "import": "./dist/core/index.js",
+      "require": "./dist/core/index.js",
+      "types": "./dist/core/index.d.ts"
+    },
+    "./plugin": {
+      "import": "./dist/plugin/index.js",
+      "require": "./dist/plugin/index.js",
+      "types": "./dist/plugin/index.d.ts"
+    }
   },
   "author": "TmRAaEx",
   "license": "MIT",
@@ -27,7 +40,6 @@
     "README.md",
     "LICENCE"
   ],
-  "types": "dist/index.d.ts",
   "devDependencies": {
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
