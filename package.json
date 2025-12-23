@@ -8,7 +8,9 @@
     "test": "node ./dist/test/index.js",
     "build": "npx tsc",
     "dev": "npx tsc --watch",
-    "release": "npx tsc && npm publish"
+    "release": "npx tsc &&  npm version patch && npm publish",
+    "release:minor": "npx tsc &&  npm version minor && npm publish",
+    "release:major": "npx tsc &&  npm version major && npm publish"
   },
   "keywords": [
     "react",
