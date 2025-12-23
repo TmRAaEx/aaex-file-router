@@ -44,7 +44,7 @@ export class RouteGenerator {
   /** Add import statement if not already imported */
   private addImport(file: FileNode, importName: string) {
     if (!this.importSet.has(file.relative_path)) {
-      const importPath = `./${file.relative_path.replace(/^src[\/\\]/, "")}`;
+      const importPath = `./${file.relative_path.replace(/^src[\/\\]/, "").replace(/\.[jt]sx?$/, "")}`;
       this.topLevelImports.push(`import ${importName} from '${importPath}';`);
       this.importSet.add(file.relative_path);
     }
