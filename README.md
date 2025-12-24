@@ -2,9 +2,9 @@
 
 A file-based routing system for React projects that automatically generates routes from your file structure. Similar to Next.js App Router or Remix file conventions.
 
-## V. 1.8.0
+## V. 2.0.0
 
-Added [useScroll hook](#useScroll) to help with page scroll after navigation
+Added support for root layout and 404 pages
 
 ## Table of Contents
 
@@ -160,7 +160,7 @@ pages/about/index.tsx → "/about"
 
 ### `layout.tsx`
 
-Wraps all sibling and nested routes. Children are rendered in an `<Outlet />`.
+Wraps all sibling and nested routes. Children are rendered in an `<Outlet />`. Also works for root layout if placed directly in `/pages`
 
 ```tsx
 // pages/admin/layout.tsx
@@ -176,7 +176,24 @@ export default function AdminLayout() {
 }
 ```
 
-### `loading.tsx` (Deprecated)
+### 404.tsx
+
+Root & folder level fallback.
+Creating a file named 404.tsx inside the page root or inside a subfolder creates a 404 page for that segment.
+root => /nonexisting
+subfolder ex: blog => blog/nonexisting
+
+will render your 404
+
+```tsx
+//src/pages/404.tsx
+
+export default function NotFound() {
+  return <>404 not found!</>;
+}
+```
+
+<!-- ### `loading.tsx` (Deprecated)
 
 Folder level loading component <br>
 Autmatically gets rendered instead of files waiting on lazy import
@@ -186,7 +203,7 @@ Autmatically gets rendered instead of files waiting on lazy import
 export default function Test() {
   return <div>Loading...</div>;
 }
-```
+``` -->
 
 ### Slug files
 
