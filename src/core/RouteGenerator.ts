@@ -66,8 +66,8 @@ export class RouteGenerator {
     // Only add folder prefix if file is layout, loading or 404
     if (
       baseName.toLowerCase() === "layout" ||
-      baseName.toLowerCase() === "loading" ||
-      baseName.toLowerCase() === "notfound"
+      baseName.toLowerCase() === "loading" 
+      // baseName.toLowerCase() === "notfound"
     ) {
       let segments = parentPath.split("/").filter(Boolean).map(this.toPascal);
 
