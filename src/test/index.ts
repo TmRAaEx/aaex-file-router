@@ -14,15 +14,12 @@ async function generateRoutes() {
 
     // console.log(fileData);
 
-    console.dir(fileData, { depth: null });
-
     const generator = new RouteGenerator();
     const routeMap = generator.generateServerRoutesFile(fileData);
 
     // console.log("Route map: ", routeMap)
 
     const routType = generator.generateTypesFile(fileData);
-    console.log(routType);
 
     // console.log(routeMap);
 

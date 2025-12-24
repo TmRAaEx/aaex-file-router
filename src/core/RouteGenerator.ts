@@ -26,6 +26,7 @@ export class RouteGenerator {
 
   /** Convert file/folder name to route segment, replacing [slug] with :slug */
   private normalizeSegment(name: string) {
+    if (name.toLowerCase() === "404") return "*"; //makes 404 catch all
     return name.replace(/\[([^\]]+)\]/g, ":$1").toLowerCase();
   }
 
@@ -43,8 +44,15 @@ export class RouteGenerator {
 
   /** Add import statement if not already imported */
   private addImport(file: FileNode, importName: string) {
+    if (importName === "404") {
+      importName = "NotFound";
+    }
     if (!this.importSet.has(file.relative_path)) {
-      const importPath = `./${file.relative_path.replace(/^src[\/\\]/, "").replace(/\.[jt]sx?$/, "")}`;
+      const importPath = `./${file.relative_path
+        .replace(/^src[\/\\]/, "")
+        .replace(/\.[jt]sx?$/, "")
+        .replace(/\/404$/, "/NotFound")}`;
+
       this.topLevelImports.push(`import ${importName} from '${importPath}';`);
       this.importSet.add(file.relative_path);
     }
@@ -52,7 +60,9 @@ export class RouteGenerator {
 
   /** Generate import name with folder prefix */
   private getPrefixedName(file: FileNode, parentPath: string, suffix: string) {
-    const baseName = file.name.replace(/\.[jt]sx?$/, "");
+    const baseName = file.name
+      .replace(/\.[jt]sx?$/, "")
+      .replace("404", "NotFound");
 
     // Only add folder prefix if file is layout or loading
     if (
@@ -76,6 +86,16 @@ export class RouteGenerator {
     }
 
     return this.toPascal(baseName) + suffix;
+  }
+
+  /** Checks if a layout file exists root level*/
+  private findRootLayout(files: FileNode[]): FileNode | null {
+    return (
+      files.find(
+        (file) =>
+          !file.isDirectory && /^layout\.(tsx|jsx|ts|js)$/i.test(file.name)
+      ) ?? null
+    );
   }
 
   // ---------------- Route Creation ----------------
@@ -160,11 +180,22 @@ export class RouteGenerator {
     isChild = false,
     folderLoadingName: string | null = null
   ): RouteConfig[] {
-    return files.map((file) =>
+    const routes = files.map((file) =>
       file.isDirectory
         ? this.createDirectoryRoute(file, isChild) // pass isChild
         : this.createFileRoute(file, parentPath, isChild, folderLoadingName)
     );
+
+    return routes.sort((a, b) => {
+      // not found last
+      if (a.path === "*") return 1;
+      if (b.path === "*") return -1;
+      //index first
+      if (a.path === "") return -1;
+      if (a.path === "") return 1;
+      //rest
+      return 0;
+    });
   }
 
   // ---------------- TypeScript Route Type Helpers ----------------
@@ -183,7 +214,8 @@ export class RouteGenerator {
         }
       } else {
         const clean = file.name.replace(/\.[jt]sx?$/, "");
-        if (clean === "layout" || clean === "loading") continue;
+        if (clean === "layout" || clean === "loading" || clean === "404")
+          continue;
 
         if (clean === "index") {
           result.push(prefix || "/");
@@ -237,12 +269,7 @@ export class RouteGenerator {
     if (children?.length) {
       // nested = true for children
 
-      //sorting dosnt work, might need to be moved?
-
       route.children = this.fileDataToServerRoutes(children, route.path, true);
-      route.children.sort((a, b) =>
-        a.path === "" ? -1 : b.path === "" ? 1 : 0
-      );
     }
 
     return route;
@@ -297,10 +324,21 @@ export class RouteGenerator {
     parentPath = "",
     isChild = false
   ): ServerRouteConfig[] {
-    return files.map((file) => {
+    const routes = files.map((file) => {
       return file.isDirectory
         ? this.createServerDirectoryRoute(file, isChild)
         : this.createServerFileRoute(file, parentPath, isChild);
+    });
+
+    return routes.sort((a, b) => {
+      // not found last
+      if (a.path === "*") return 1;
+      if (b.path === "*") return -1;
+      //index first
+      if (a.path === "") return -1;
+      if (a.path === "") return 1;
+      //rest
+      return 0;
     });
   }
 
@@ -308,7 +346,30 @@ export class RouteGenerator {
     this.topLevelImports = [];
     this.importSet.clear();
 
-    const routes = this.fileDataToServerRoutes(fileData);
+    const rootLayout = this.findRootLayout(fileData);
+
+    //remove root layout from routes
+    const withOutLayout = fileData.filter((f) => f !== rootLayout);
+
+    let routes = this.fileDataToServerRoutes(withOutLayout);
+
+    if (rootLayout) {
+      const importName = "RootLayout";
+      const restOfRoutes = routes;
+
+      this.addImport(rootLayout, importName);
+
+      routes = [
+        {
+          path: "",
+          element: `React.createElement(${importName})`,
+          modulePath: path
+            .resolve(process.cwd(), rootLayout.relative_path)
+            .replace(/\\/g, "/"),
+          children: restOfRoutes,
+        },
+      ];
+    }
 
     return `//* AUTO GENERATED: DO NOT EDIT
 import React from 'react';
@@ -331,7 +392,27 @@ export default serverRoutes;
     this.topLevelImports = [];
     this.importSet.clear();
 
-    const routes = this.fileDataToRoutes(fileData);
+    const rootLayout = this.findRootLayout(fileData);
+
+    //remove root layout from routes
+    const withOutLayout = fileData.filter((f) => f !== rootLayout);
+
+    let routes = this.fileDataToServerRoutes(withOutLayout);
+
+    if (rootLayout) {
+      const importName = "RootLayout";
+      const restOfRoutes = routes;
+
+      this.addImport(rootLayout, importName);
+
+      routes = [
+        {
+          path: "",
+          element: `React.createElement(${importName})`,
+          children: restOfRoutes,
+        },
+      ];
+    }
 
     return `//* AUTO GENERATED: DO NOT EDIT
 import React from 'react';
