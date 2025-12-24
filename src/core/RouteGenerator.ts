@@ -63,10 +63,11 @@ export class RouteGenerator {
       .replace(/\.[jt]sx?$/, "")
       .replace("404", "NotFound");
 
-    // Only add folder prefix if file is layout or loading
+    // Only add folder prefix if file is layout, loading or 404
     if (
       baseName.toLowerCase() === "layout" ||
-      baseName.toLowerCase() === "loading"
+      baseName.toLowerCase() === "loading" ||
+      baseName.toLowerCase() === "notfound"
     ) {
       let segments = parentPath.split("/").filter(Boolean).map(this.toPascal);
 
