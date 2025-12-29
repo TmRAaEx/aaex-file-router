@@ -1,4 +1,5 @@
 import path from "path";
+import React from "react";
 
 interface RouteConfig {
   path: string;
@@ -66,8 +67,7 @@ export class RouteGenerator {
     // Only add folder prefix if file is layout, loading or 404
     if (
       baseName.toLowerCase() === "layout" ||
-      baseName.toLowerCase() === "loading" 
-      // baseName.toLowerCase() === "notfound"
+      baseName.toLowerCase() === "loading"
     ) {
       let segments = parentPath.split("/").filter(Boolean).map(this.toPascal);
 
@@ -118,18 +118,20 @@ export class RouteGenerator {
       route.element = `React.createElement(${layoutName})`;
     }
 
-    const loadingFile = file.children?.find((f) =>
-      /^loading\.(tsx|jsx|ts|js)$/i.test(f.name)
-    );
-    let loadingName: string | null = null;
-    if (loadingFile) {
-      loadingName = this.getPrefixedName(
-        loadingFile,
-        file.relative_path,
-        "Loading"
-      );
-      this.addImport(loadingFile, loadingName);
-    }
+    /** Loading not used */
+
+    // const loadingFile = file.children?.find((f) =>
+    //   /^loading\.(tsx|jsx|ts|js)$/i.test(f.name)
+    // );
+    // let loadingName: string | null = null;
+    // if (loadingFile) {
+    //   loadingName = this.getPrefixedName(
+    //     loadingFile,
+    //     file.relative_path,
+    //     "Loading"
+    //   );
+    //   this.addImport(loadingFile, loadingName);
+    // }
 
     const children = file.children?.filter(
       (f) =>
@@ -137,14 +139,11 @@ export class RouteGenerator {
         !/^loading\.(tsx|jsx|ts|js)$/i.test(f.name)
     );
 
+    route.element = React.createElement(React.Fragment); //if not layout
+
     if (children?.length) {
       // nested = true for children
-      route.children = this.fileDataToRoutes(
-        children,
-        route.path,
-        true,
-        loadingName
-      );
+      route.children = this.fileDataToRoutes(children, route.path, true);
     }
 
     return route;
@@ -178,7 +177,8 @@ export class RouteGenerator {
     files: FileNode[],
     parentPath = "",
     isChild = false,
-    folderLoadingName: string | null = null
+    folderLoadingName: string | null = null,
+    includeModulePath: boolean = false
   ): RouteConfig[] {
     const routes = files.map((file) =>
       file.isDirectory
@@ -266,6 +266,7 @@ export class RouteGenerator {
         !/^loading\.(tsx|jsx|ts|js)$/i.test(f.name)
     );
 
+    route.element = React.createElement(React.Fragment); //if not layout
     if (children?.length) {
       // nested = true for children
 
