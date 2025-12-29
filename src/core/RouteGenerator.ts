@@ -116,6 +116,8 @@ export class RouteGenerator {
       );
       this.addImport(layoutFile, layoutName);
       route.element = `React.createElement(${layoutName})`;
+    } else {
+      route.element = `Outlet`;
     }
 
     const children = file.children?.filter(
@@ -123,8 +125,6 @@ export class RouteGenerator {
         !/^layout\.(tsx|jsx|ts|js)$/i.test(f.name) &&
         !/^loading\.(tsx|jsx|ts|js)$/i.test(f.name)
     );
-
-    if (!layoutFile) route.element = `React.createElement(React.Fragment)`;
 
     if (children?.length) {
       // nested = true for children
@@ -243,17 +243,17 @@ export class RouteGenerator {
       route.modulePath = path
         .resolve(process.cwd(), layoutFile.relative_path)
         .replace(/\\/g, "/");
+    } else {
+      route.element = `Outlet`;
     }
-
     const children = file.children?.filter(
       (f) =>
         !/^layout\.(tsx|jsx|ts|js)$/i.test(f.name) &&
         !/^loading\.(tsx|jsx|ts|js)$/i.test(f.name)
     );
 
-    if (!layoutFile) route.element = `React.createElement(React.Fragment)`;
     if (children?.length) {
-      // nested = true for children
+      // nested = true for chsildren
 
       route.children = this.fileDataToServerRoutes(children, route.path, true);
     }
@@ -338,6 +338,7 @@ export class RouteGenerator {
     const withOutLayout = fileData.filter((f) => f !== rootLayout);
 
     let routes = this.fileDataToServerRoutes(withOutLayout);
+    const outlet = routes.find((route) => route.element === `Outlet`);
 
     if (rootLayout) {
       const importName = "RootLayout";
@@ -360,6 +361,8 @@ export class RouteGenerator {
     return `//* AUTO GENERATED: DO NOT EDIT
 import React from 'react';
 ${this.topLevelImports.join("\n")}
+${outlet ? `import {Outlet} from "react-router";` : null}
+
 
 
 const serverRoutes: any[] = ${JSON.stringify(routes, null, 2).replace(
@@ -384,6 +387,7 @@ export default serverRoutes;
     const withOutLayout = fileData.filter((f) => f !== rootLayout);
 
     let routes = this.fileDataToServerRoutes(withOutLayout);
+    const outlet = routes.find((route) => route.element === `Outlet`);
 
     if (rootLayout) {
       const importName = "RootLayout";
@@ -403,7 +407,7 @@ export default serverRoutes;
     return `//* AUTO GENERATED: DO NOT EDIT
 import React from 'react';
 ${this.topLevelImports.join("\n")}
-import type { RouteObject } from 'react-router-dom';
+import type { RouteObject}, ${outlet ? `,{Outlet}` : null}from 'react-router';
 
 const routes: RouteObject[] = ${JSON.stringify(routes, null, 2).replace(
       /"React\.createElement\(([\s\S]*?)\)"/g,
