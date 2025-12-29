@@ -124,7 +124,7 @@ export class RouteGenerator {
         !/^loading\.(tsx|jsx|ts|js)$/i.test(f.name)
     );
 
-    route.element = React.createElement(React.Fragment); //if not layout
+    if (!layoutFile) route.element = `React.createElement(React.Fragment)`;
 
     if (children?.length) {
       // nested = true for children
@@ -251,7 +251,7 @@ export class RouteGenerator {
         !/^loading\.(tsx|jsx|ts|js)$/i.test(f.name)
     );
 
-    route.element = React.createElement(React.Fragment); //if not layout
+    if (!layoutFile) route.element = `React.createElement(React.Fragment)`;
     if (children?.length) {
       // nested = true for children
 
