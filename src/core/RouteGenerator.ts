@@ -118,21 +118,6 @@ export class RouteGenerator {
       route.element = `React.createElement(${layoutName})`;
     }
 
-    /** Loading not used */
-
-    // const loadingFile = file.children?.find((f) =>
-    //   /^loading\.(tsx|jsx|ts|js)$/i.test(f.name)
-    // );
-    // let loadingName: string | null = null;
-    // if (loadingFile) {
-    //   loadingName = this.getPrefixedName(
-    //     loadingFile,
-    //     file.relative_path,
-    //     "Loading"
-    //   );
-    //   this.addImport(loadingFile, loadingName);
-    // }
-
     const children = file.children?.filter(
       (f) =>
         !/^layout\.(tsx|jsx|ts|js)$/i.test(f.name) &&
