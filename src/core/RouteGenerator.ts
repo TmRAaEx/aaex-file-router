@@ -1,5 +1,5 @@
 import path from "path";
-import React from "react";
+import React, { Children } from "react";
 
 interface RouteConfig {
   path: string;
@@ -97,6 +97,21 @@ export class RouteGenerator {
       ) ?? null
     );
   }
+  /** Checks if there is a route that uses outlet as an element */
+  private findOutlet(routes: RouteConfig[] | ServerRouteConfig[]): boolean {
+    let elements = [];
+    for (let route of routes) {
+      if (route.children) {
+        route.children.forEach((child) => {
+          elements.push(child.element);
+        });
+      }
+      elements.push(route.element);
+    }
+
+  
+    return elements.includes(`React.createElement(Outlet)`);
+  }
 
   // ---------------- Route Creation ----------------
 
@@ -117,7 +132,7 @@ export class RouteGenerator {
       this.addImport(layoutFile, layoutName);
       route.element = `React.createElement(${layoutName})`;
     } else {
-      route.element = `Outlet`;
+      route.element = `React.createElement(Outlet)`;
     }
 
     const children = file.children?.filter(
@@ -244,7 +259,7 @@ export class RouteGenerator {
         .resolve(process.cwd(), layoutFile.relative_path)
         .replace(/\\/g, "/");
     } else {
-      route.element = `Outlet`;
+      route.element = `React.createElement(Outlet)`;
     }
     const children = file.children?.filter(
       (f) =>
@@ -338,7 +353,8 @@ export class RouteGenerator {
     const withOutLayout = fileData.filter((f) => f !== rootLayout);
 
     let routes = this.fileDataToServerRoutes(withOutLayout);
-    const outlet = routes.find((route) => route.element === `Outlet`);
+
+    const outlet = this.findOutlet(routes);
 
     if (rootLayout) {
       const importName = "RootLayout";
@@ -361,7 +377,7 @@ export class RouteGenerator {
     return `//* AUTO GENERATED: DO NOT EDIT
 import React from 'react';
 ${this.topLevelImports.join("\n")}
-${outlet ? `import {Outlet} from "react-router";` : null}
+${outlet ? `import {Outlet} from "react-router";` : ""}
 
 
 
@@ -387,7 +403,7 @@ export default serverRoutes;
     const withOutLayout = fileData.filter((f) => f !== rootLayout);
 
     let routes = this.fileDataToServerRoutes(withOutLayout);
-    const outlet = routes.find((route) => route.element === `Outlet`);
+    const outlet = this.findOutlet(routes);
 
     if (rootLayout) {
       const importName = "RootLayout";
@@ -407,7 +423,7 @@ export default serverRoutes;
     return `//* AUTO GENERATED: DO NOT EDIT
 import React from 'react';
 ${this.topLevelImports.join("\n")}
-import type { RouteObject}, ${outlet ? `,{Outlet}` : null}from 'react-router';
+import type { RouteObject}, ${outlet ? `,{Outlet}` : ""}from 'react-router';
 
 const routes: RouteObject[] = ${JSON.stringify(routes, null, 2).replace(
       /"React\.createElement\(([\s\S]*?)\)"/g,
