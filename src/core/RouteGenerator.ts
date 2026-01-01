@@ -1,10 +1,10 @@
 import path from "path";
-import React, { Children } from "react";
 
 interface RouteConfig {
   path: string;
   element?: any;
   children?: RouteConfig[];
+  modulePath?: string;
 }
 
 interface ServerRouteConfig extends RouteConfig {
@@ -109,7 +109,6 @@ export class RouteGenerator {
       elements.push(route.element);
     }
 
-  
     return elements.includes(`React.createElement(Outlet)`);
   }
 
@@ -153,8 +152,7 @@ export class RouteGenerator {
   private createFileRoute(
     file: FileNode,
     parentPath: string,
-    isChild: boolean,
-    folderLoadingName: string | null
+    isChild: boolean
   ): RouteConfig {
     const nameWithoutExt = file.name.replace(/\.[jt]sx?$/, "");
     const isIndex = nameWithoutExt.toLowerCase() === "index";
@@ -177,13 +175,12 @@ export class RouteGenerator {
     files: FileNode[],
     parentPath = "",
     isChild = false,
-    folderLoadingName: string | null = null,
     includeModulePath: boolean = false
   ): RouteConfig[] {
     const routes = files.map((file) =>
       file.isDirectory
         ? this.createDirectoryRoute(file, isChild) // pass isChild
-        : this.createFileRoute(file, parentPath, isChild, folderLoadingName)
+        : this.createFileRoute(file, parentPath, isChild)
     );
 
     return routes.sort((a, b) => {
@@ -260,6 +257,9 @@ export class RouteGenerator {
         .replace(/\\/g, "/");
     } else {
       route.element = `React.createElement(Outlet)`;
+      route.modulePath = path
+        .resolve(process.cwd(), file.relative_path)
+        .replace(/\\/g, "/");
     }
     const children = file.children?.filter(
       (f) =>
