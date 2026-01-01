@@ -1,6 +1,6 @@
 {
   "name": "aaex-file-router",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "A file-based routing system for React projects that automatically generates routes from your file structure. Similar to Next.js App Router or Remix file conventions.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
