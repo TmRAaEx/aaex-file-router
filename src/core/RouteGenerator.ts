@@ -115,7 +115,7 @@ export class RouteGenerator {
   }
   /** Standardized modulePath for development */
   private developmentModulePath(relative_path: FileNode["relative_path"]) {
-    return path.resolve(process.cwd(), relative_path).replace(/\\/g, "/");
+    return relative_path.replace(/\\/g, "/");
   }
 
   // ================ Route Creation ================
