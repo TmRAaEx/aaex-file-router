@@ -364,7 +364,7 @@ ${outlet ? `import {Outlet} from "react-router";` : ""}
 
 
 
-const serverRoutes: any[] = ${JSON.stringify(routes, null, 2).replace(
+const serverRoutes= ${JSON.stringify(routes, null, 2).replace(
       /"React\.createElement\(([\s\S]*?)\)"/g,
       (_, inner) => `${inner}`
     )};
