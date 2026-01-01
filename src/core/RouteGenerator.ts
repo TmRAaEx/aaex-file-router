@@ -318,6 +318,23 @@ ${union};
   }
 
   // ================ Build METHODS ================
+
+  private mapToProductionPaths(routes: RouteConfig[]): RouteConfig[] {
+  return routes.map(route => {
+    const newRoute: RouteConfig = {
+      ...route,
+      modulePath: this.productionModulePath(route.modulePath!),
+    };
+
+    if (route.children) {
+      newRoute.children = this.mapToProductionPaths(route.children);
+    }
+
+    return newRoute;
+  });
+}
+
+
   public generateBuiltRoutes(fileData: FileNode[]): string {
     this.topLevelImports = [];
     this.importSet.clear();
@@ -328,28 +345,7 @@ ${union};
     const withOutLayout = fileData.filter((f) => f !== rootLayout);
 
     let tmp_routes = this.fileDataToRoutes(withOutLayout);
-    let routes = tmp_routes.map((route) => {
-      let children: RouteConfig[] = [];
-      if (route.children) {
-        children = route.children.map((child) => {
-          return {
-            ...child,
-            modulePath: this.productionModulePath(child.modulePath!),
-          };
-        });
-      }
-      if (children.length > 0) {
-        return {
-          ...route,
-          modulePath: this.productionModulePath(route.modulePath!),
-          children: children,
-        };
-      }
-      return {
-        ...route,
-        modulePath: this.productionModulePath(route.modulePath!),
-      };
-    });
+    let routes = this.mapToProductionPaths(tmp_routes);
 
     const outlet = this.findOutlet(routes);
 
