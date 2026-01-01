@@ -290,7 +290,6 @@ export class RouteGenerator {
     }
 
     return `//* AUTO GENERATED: DO NOT EDIT
-import React from 'react';
 ${this.topLevelImports.join("\n")}
 ${outlet ? `import {Outlet} from "react-router";` : ""}
 
@@ -354,7 +353,6 @@ ${union};
     });
 
     return `//* AUTO GENERATED: DO NOT EDIT
-import React from 'react';
 ${resolvedImports.join("\n")}
 ${outlet ? `import {Outlet} from "react-router";` : ""}
 
