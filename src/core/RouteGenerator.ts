@@ -19,7 +19,7 @@ export class RouteGenerator {
   private topLevelImports: string[] = [];
   private importSet: Set<string> = new Set();
 
-  // ---------------- Helpers ----------------
+  // ================ Helpers ================
 
   /** Convert file/folder name to route segment, replacing [slug] with :slug */
   private normalizeSegment(name: string) {
@@ -107,8 +107,18 @@ export class RouteGenerator {
 
     return elements.includes(`React.createElement(Outlet)`);
   }
+  /** Replaces the development module path with the production modulePath */
+  private productionModulePath(relative_path: FileNode["relative_path"]) {
+    return this.developmentModulePath(relative_path)
+      .replace("src", "dist")
+      .replace("tsx", "js");
+  }
+  /** Standardized modulePath for development */
+  private developmentModulePath(relative_path: FileNode["relative_path"]) {
+    return path.resolve(process.cwd(), relative_path).replace(/\\/g, "/");
+  }
 
-  // ---------------- Route Creation ----------------
+  // ================ Route Creation ================
   private createDirectoryRoute(file: FileNode) {
     const route: RouteConfig = { path: this.normalizeSegment(file.name) };
 
@@ -124,9 +134,7 @@ export class RouteGenerator {
       );
       this.addImport(layoutFile, layoutName);
       route.element = `React.createElement(${layoutName})`;
-      route.modulePath = path
-        .resolve(process.cwd(), layoutFile.relative_path)
-        .replace(/\\/g, "/");
+      route.modulePath = this.developmentModulePath(layoutFile.relative_path);
     } else {
       route.element = `React.createElement(Outlet)`;
       route.modulePath = path
@@ -134,14 +142,10 @@ export class RouteGenerator {
         .replace(/\\/g, "/");
     }
     const children = file.children?.filter(
-      (f) =>
-        !/^layout\.(tsx|jsx|ts|js)$/i.test(f.name) &&
-        !/^loading\.(tsx|jsx|ts|js)$/i.test(f.name)
+      (f) => !/^layout\.(tsx|jsx|ts|js)$/i.test(f.name)
     );
 
     if (children?.length) {
-      // nested = true for chsildren
-
       route.children = this.fileDataToRoutes(children, route.path, true);
     }
 
@@ -179,7 +183,7 @@ export class RouteGenerator {
     // file.relative_path = src/pages/test/index.tsx
     //
     // → /Users/me/myapp/src/pages/test/index.tsx
-    const absolutePath = path.resolve(process.cwd(), file.relative_path);
+    const absolutePath = this.developmentModulePath(file.relative_path);
 
     // Normalize for Node ESM (Windows requires forward slashes)
     const normalizedAbsolutePath = absolutePath.replace(/\\/g, "/");
@@ -215,7 +219,7 @@ export class RouteGenerator {
     });
   }
 
-  // ---------------- TypeScript Route Type Helpers ----------------
+  // ================ TypeScript Route Type Helpers ================
 
   /** Collect all route paths for type generation */
   private collectPaths(files: FileNode[], prefix = ""): string[] {
@@ -255,7 +259,7 @@ export class RouteGenerator {
     return normalized.map((p) => `  | "${p}"`).join("\n");
   }
 
-  // ---------------- PUBLIC METHODS ----------------
+  // ================ PUBLIC METHODS ================
 
   /** Generate route definition file for development */
   public generateRoutesFile(fileData: FileNode[]): string {
@@ -281,9 +285,7 @@ export class RouteGenerator {
         {
           path: "",
           element: `React.createElement(${importName})`,
-          modulePath: path
-            .resolve(process.cwd(), rootLayout.relative_path)
-            .replace(/\\/g, "/"),
+          modulePath: this.developmentModulePath(rootLayout.relative_path),
           children: restOfRoutes,
         },
       ];
@@ -315,7 +317,7 @@ ${union};
 `;
   }
 
-  // ---------------- Build METHODS ----------------
+  // ================ Build METHODS ================
   public generateBuiltRoutes(fileData: FileNode[]): string {
     this.topLevelImports = [];
     this.importSet.clear();
@@ -325,7 +327,13 @@ ${union};
     //remove root layout from routes
     const withOutLayout = fileData.filter((f) => f !== rootLayout);
 
-    let routes = this.fileDataToRoutes(withOutLayout);
+    let tmp_routes = this.fileDataToRoutes(withOutLayout);
+    let routes = tmp_routes.map((route) => {
+      return {
+        ...route,
+        modulePath: this.productionModulePath(route.modulePath!),
+      };
+    });
 
     const outlet = this.findOutlet(routes);
 
@@ -339,9 +347,7 @@ ${union};
         {
           path: "",
           element: `React.createElement(${importName})`,
-          modulePath: path
-            .resolve(process.cwd(), rootLayout.relative_path)
-            .replace(/\\/g, "/"),
+          modulePath: this.productionModulePath(rootLayout.relative_path),
           children: restOfRoutes,
         },
       ];
