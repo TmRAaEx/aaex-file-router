@@ -7,8 +7,6 @@ interface RouteConfig {
   modulePath?: string;
 }
 
-
-
 interface FileNode {
   name: string;
   relative_path: string;
@@ -150,12 +148,12 @@ export class RouteGenerator {
     return route;
   }
 
-  /** Creates server route with the module path included */
+  /** Creates routes that work with ssr*/
   private createFileRoute(
     file: FileNode,
     parentPath: string,
     isChild: boolean
-  ): ServerRouteConfig {
+  ): RouteConfig {
     const fileName = file.name;
 
     // Build route path
@@ -198,7 +196,7 @@ export class RouteGenerator {
     files: FileNode[],
     parentPath = "",
     isChild = false
-  ): ServerRouteConfig[] {
+  ): RouteConfig[] {
     const routes = files.map((file) => {
       return file.isDirectory
         ? this.createDirectoryRoute(file)
