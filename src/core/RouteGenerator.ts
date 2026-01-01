@@ -329,6 +329,22 @@ ${union};
 
     let tmp_routes = this.fileDataToRoutes(withOutLayout);
     let routes = tmp_routes.map((route) => {
+      let children: RouteConfig[] = [];
+      if (route.children) {
+        children = route.children.map((child) => {
+          return {
+            ...child,
+            modulePath: this.productionModulePath(child.modulePath!),
+          };
+        });
+      }
+      if (children.length > 0) {
+        return {
+          ...route,
+          modulePath: this.productionModulePath(route.modulePath!),
+          children: children,
+        };
+      }
       return {
         ...route,
         modulePath: this.productionModulePath(route.modulePath!),
