@@ -7,9 +7,7 @@ interface RouteConfig {
   modulePath?: string;
 }
 
-interface ServerRouteConfig extends RouteConfig {
-  modulePath?: string;
-}
+
 
 interface FileNode {
   name: string;
@@ -98,7 +96,7 @@ export class RouteGenerator {
     );
   }
   /** Checks if there is a route that uses outlet as an element */
-  private findOutlet(routes: RouteConfig[] | ServerRouteConfig[]): boolean {
+  private findOutlet(routes: RouteConfig[]): boolean {
     let elements = [];
     for (let route of routes) {
       if (route.children) {
@@ -113,10 +111,8 @@ export class RouteGenerator {
   }
 
   // ---------------- Route Creation ----------------
-
-  /** Create route object for a directory (may contain layout/loading/children) */
-  private createDirectoryRoute(file: FileNode, isChild: boolean): RouteConfig {
-    const route: ServerRouteConfig = { path: this.normalizeSegment(file.name) };
+  private createDirectoryRoute(file: FileNode) {
+    const route: RouteConfig = { path: this.normalizeSegment(file.name) };
 
     const layoutFile = file.children?.find((f) =>
       /^layout\.(tsx|jsx|ts|js)$/i.test(f.name)
@@ -130,10 +126,15 @@ export class RouteGenerator {
       );
       this.addImport(layoutFile, layoutName);
       route.element = `React.createElement(${layoutName})`;
+      route.modulePath = path
+        .resolve(process.cwd(), layoutFile.relative_path)
+        .replace(/\\/g, "/");
     } else {
       route.element = `React.createElement(Outlet)`;
+      route.modulePath = path
+        .resolve(process.cwd(), file.relative_path)
+        .replace(/\\/g, "/");
     }
-
     const children = file.children?.filter(
       (f) =>
         !/^layout\.(tsx|jsx|ts|js)$/i.test(f.name) &&
@@ -141,47 +142,68 @@ export class RouteGenerator {
     );
 
     if (children?.length) {
-      // nested = true for children
+      // nested = true for chsildren
+
       route.children = this.fileDataToRoutes(children, route.path, true);
     }
 
     return route;
   }
 
-  /** Create route object for a file */
+  /** Creates server route with the module path included */
   private createFileRoute(
     file: FileNode,
     parentPath: string,
     isChild: boolean
-  ): RouteConfig {
-    const nameWithoutExt = file.name.replace(/\.[jt]sx?$/, "");
+  ): ServerRouteConfig {
+    const fileName = file.name;
+
+    // Build route path
+    const nameWithoutExt = fileName.replace(/\.[jt]sx?$/, "");
     const isIndex = nameWithoutExt.toLowerCase() === "index";
+    // const isRootLayout = nameWithoutExt.toLowerCase() === "rootlayout"
 
     let pathSegment = isIndex ? "" : this.normalizeSegment(nameWithoutExt);
-    if (!isChild && parentPath) pathSegment = `${parentPath}/${pathSegment}`;
+    if (!isChild && parentPath) {
+      pathSegment = `${parentPath}/${pathSegment}`;
+    }
 
+    // Get import identifier
     const importName = this.getPrefixedName(file, parentPath, "");
 
+    // Static import for server
     this.addImport(file, importName);
+
+    // Create ABSOLUTE FILE PATH
+    //
+    // Example:
+    // projectRoot = /Users/me/myapp
+    // file.relative_path = src/pages/test/index.tsx
+    //
+    // → /Users/me/myapp/src/pages/test/index.tsx
+    const absolutePath = path.resolve(process.cwd(), file.relative_path);
+
+    // Normalize for Node ESM (Windows requires forward slashes)
+    const normalizedAbsolutePath = absolutePath.replace(/\\/g, "/");
+
     return {
       path: pathSegment,
       element: `React.createElement(${importName})`,
+      modulePath: normalizedAbsolutePath,
     };
-
-    // ---------------- Route Recursion ----------------
   }
-  /** Recursively convert FileNode array into RouteConfig array */
+
+  /**Builds routes usable by vite ssr to extend functionality */
   private fileDataToRoutes(
     files: FileNode[],
     parentPath = "",
-    isChild = false,
-    includeModulePath: boolean = false
-  ): RouteConfig[] {
-    const routes = files.map((file) =>
-      file.isDirectory
-        ? this.createDirectoryRoute(file, isChild) // pass isChild
-        : this.createFileRoute(file, parentPath, isChild)
-    );
+    isChild = false
+  ): ServerRouteConfig[] {
+    const routes = files.map((file) => {
+      return file.isDirectory
+        ? this.createDirectoryRoute(file)
+        : this.createFileRoute(file, parentPath, isChild);
+    });
 
     return routes.sort((a, b) => {
       // not found last
@@ -235,115 +257,10 @@ export class RouteGenerator {
     return normalized.map((p) => `  | "${p}"`).join("\n");
   }
 
-  /** ---------------- Server specific functions for AaExJS ---------------- */
+  // ---------------- PUBLIC METHODS ----------------
 
-  private createServerDirectoryRoute(file: FileNode, isChild: boolean) {
-    const route: ServerRouteConfig = { path: this.normalizeSegment(file.name) };
-
-    const layoutFile = file.children?.find((f) =>
-      /^layout\.(tsx|jsx|ts|js)$/i.test(f.name)
-    );
-    let layoutName: string | null = null;
-    if (layoutFile) {
-      layoutName = this.getPrefixedName(
-        layoutFile,
-        file.relative_path,
-        "Layout"
-      );
-      this.addImport(layoutFile, layoutName);
-      route.element = `React.createElement(${layoutName})`;
-      route.modulePath = path
-        .resolve(process.cwd(), layoutFile.relative_path)
-        .replace(/\\/g, "/");
-    } else {
-      route.element = `React.createElement(Outlet)`;
-      route.modulePath = path
-        .resolve(process.cwd(), file.relative_path)
-        .replace(/\\/g, "/");
-    }
-    const children = file.children?.filter(
-      (f) =>
-        !/^layout\.(tsx|jsx|ts|js)$/i.test(f.name) &&
-        !/^loading\.(tsx|jsx|ts|js)$/i.test(f.name)
-    );
-
-    if (children?.length) {
-      // nested = true for chsildren
-
-      route.children = this.fileDataToServerRoutes(children, route.path, true);
-    }
-
-    return route;
-  }
-
-  /** Creates server route with the module path included */
-  private createServerFileRoute(
-    file: FileNode,
-    parentPath: string,
-    isChild: boolean
-  ): ServerRouteConfig {
-    const fileName = file.name;
-
-    // Build route path
-    const nameWithoutExt = fileName.replace(/\.[jt]sx?$/, "");
-    const isIndex = nameWithoutExt.toLowerCase() === "index";
-    // const isRootLayout = nameWithoutExt.toLowerCase() === "rootlayout"
-
-    let pathSegment = isIndex ? "" : this.normalizeSegment(nameWithoutExt);
-    if (!isChild && parentPath) {
-      pathSegment = `${parentPath}/${pathSegment}`;
-    }
-
-    // Get import identifier
-    const importName = this.getPrefixedName(file, parentPath, "");
-
-    // Static import for server
-    this.addImport(file, importName);
-
-    // Create ABSOLUTE FILE PATH
-    //
-    // Example:
-    // projectRoot = /Users/me/myapp
-    // file.relative_path = src/pages/test/index.tsx
-    //
-    // → /Users/me/myapp/src/pages/test/index.tsx
-    const absolutePath = path.resolve(process.cwd(), file.relative_path);
-
-    // Normalize for Node ESM (Windows requires forward slashes)
-    const normalizedAbsolutePath = absolutePath.replace(/\\/g, "/");
-
-    return {
-      path: pathSegment,
-      element: `React.createElement(${importName})`,
-      modulePath: normalizedAbsolutePath,
-    };
-  }
-
-  /**Builds routes usable by vite ssr to extend functionality */
-  private fileDataToServerRoutes(
-    files: FileNode[],
-    parentPath = "",
-    isChild = false
-  ): ServerRouteConfig[] {
-    const routes = files.map((file) => {
-      return file.isDirectory
-        ? this.createServerDirectoryRoute(file, isChild)
-        : this.createServerFileRoute(file, parentPath, isChild);
-    });
-
-    return routes.sort((a, b) => {
-      // not found last
-      if (a.path === "*") return 1;
-      if (b.path === "*") return -1;
-      //index first
-      if (a.path === "") return -1;
-      if (a.path === "") return 1;
-      //rest
-      return 0;
-    });
-  }
-
-  public generateServerRoutesFile(fileData: FileNode[]): string {
+  /** Generate route definition file for development */
+  public generateRoutesFile(fileData: FileNode[]): string {
     this.topLevelImports = [];
     this.importSet.clear();
 
@@ -352,7 +269,7 @@ export class RouteGenerator {
     //remove root layout from routes
     const withOutLayout = fileData.filter((f) => f !== rootLayout);
 
-    let routes = this.fileDataToServerRoutes(withOutLayout);
+    let routes = this.fileDataToRoutes(withOutLayout);
 
     const outlet = this.findOutlet(routes);
 
@@ -390,10 +307,19 @@ export default serverRoutes;
 `;
   }
 
-  // ---------------- PUBLIC METHODS ----------------
+  /** Generate route type file (route paths as union) */
+  public generateTypesFile(fileData: FileNode[]): string {
+    const paths = this.collectPaths(fileData, "");
+    const union = this.buildTypeUnion(paths);
 
-  /** Generate routes.ts content */
-  public generateRoutesFile(fileData: FileNode[]): string {
+    return `// AUTO-GENERATED: DO NOT EDIT
+export type FileRoutes =
+${union};
+`;
+  }
+
+  // ---------------- Build METHODS ----------------
+  public generateBuiltRoutes(fileData: FileNode[]): string {
     this.topLevelImports = [];
     this.importSet.clear();
 
@@ -402,7 +328,8 @@ export default serverRoutes;
     //remove root layout from routes
     const withOutLayout = fileData.filter((f) => f !== rootLayout);
 
-    let routes = this.fileDataToServerRoutes(withOutLayout);
+    let routes = this.fileDataToRoutes(withOutLayout);
+
     const outlet = this.findOutlet(routes);
 
     if (rootLayout) {
@@ -415,33 +342,32 @@ export default serverRoutes;
         {
           path: "",
           element: `React.createElement(${importName})`,
+          modulePath: path
+            .resolve(process.cwd(), rootLayout.relative_path)
+            .replace(/\\/g, "/"),
           children: restOfRoutes,
         },
       ];
     }
 
+    const resolvedImports = this.topLevelImports.map((i) => {
+      let newImport = i.replace("';", ".js';");
+      return newImport;
+    });
+
     return `//* AUTO GENERATED: DO NOT EDIT
 import React from 'react';
-${this.topLevelImports.join("\n")}
-import type { RouteObject}, ${outlet ? `,{Outlet}` : ""}from 'react-router';
+${resolvedImports.join("\n")}
+${outlet ? `import {Outlet} from "react-router";` : ""}
 
-const routes: RouteObject[] = ${JSON.stringify(routes, null, 2).replace(
+
+
+const serverRoutes: any[] = ${JSON.stringify(routes, null, 2).replace(
       /"React\.createElement\(([\s\S]*?)\)"/g,
-      (_, inner) => `React.createElement(${inner})`
+      (_, inner) => `${inner}`
     )};
 
-export default routes;
-`;
-  }
-
-  /** Generate route type file (route paths as union) */
-  public generateTypesFile(fileData: FileNode[]): string {
-    const paths = this.collectPaths(fileData, "");
-    const union = this.buildTypeUnion(paths);
-
-    return `// AUTO-GENERATED: DO NOT EDIT
-export type FileRoutes =
-${union};
+export default serverRoutes;
 `;
   }
 }

@@ -15,7 +15,7 @@ async function generateRoutes() {
     // console.log(fileData);
 
     const generator = new RouteGenerator();
-    const routeMap = generator.generateServerRoutesFile(fileData);
+    const routeMap = generator.generateBuiltRoutes(fileData);
 
     // console.log("Route map: ", routeMap)
 

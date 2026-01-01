@@ -32,7 +32,7 @@ async function regenerateRoutes(pagesDir: string, serverOutputAbs: string) {
   const generator = new RouteGenerator();
 
   const fileData = await scanner.get_file_data();
-  const serverRoutesCode = generator.generateServerRoutesFile(fileData);
+  const serverRoutesCode = generator.generateRoutesFile(fileData);
   const routesType = generator.generateTypesFile(fileData);
 
   await fs.writeFile(serverOutputAbs, serverRoutesCode, "utf-8");
