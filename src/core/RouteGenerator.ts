@@ -1,6 +1,6 @@
 import path from "path";
 
-interface RouteConfig {
+export interface RouteConfig {
   path: string;
   element?: any;
   children?: RouteConfig[];
