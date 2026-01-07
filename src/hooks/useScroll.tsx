@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { RefObject, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 /**
@@ -6,18 +6,20 @@ import { useLocation } from "react-router-dom";
  */
 export function useScroll(options?: {
   behavior?: ScrollBehavior;
-  container?: HTMLElement | null;
+  container?: RefObject<HTMLElement | null>;
 }) {
   const { pathname } = useLocation();
 
   const behavior = options?.behavior ?? "auto";
-  const container = options?.container ?? null;
+  const containerRef = options?.container;
 
   useEffect(() => {
-    if (container) {
-      container.scrollTo({ top: 0, behavior });
+    const el = containerRef?.current;
+
+    if (el) {
+      el.scrollTo({ top: 0, behavior });
     } else {
       window.scrollTo({ top: 0, behavior });
     }
-  }, [pathname, behavior, container]);
+  }, [pathname, behavior, containerRef]);
 }
