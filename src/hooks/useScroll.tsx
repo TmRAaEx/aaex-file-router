@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { RefObject, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 /**
@@ -11,7 +11,7 @@ export function useScroll(options?: {
   const { pathname } = useLocation();
 
   const behavior = options?.behavior ?? "auto";
-  const container = options?.container ?? null;
+  const container = options?.container;
 
   useEffect(() => {
     if (container) {
